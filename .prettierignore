@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+coverage
+apps/desktop/frontend/wailsjs
+apps/api/prisma/migrations
+package-lock.json
+*.md

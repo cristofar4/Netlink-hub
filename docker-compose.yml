@@ -1,0 +1,55 @@
+# PostgreSQL for NetLink development.
+#
+# This is the database only. The API, the desktop app and the agent all run on
+# your machine so you can attach a debugger and see the Windows-specific parts
+# behave — containerising them would hide exactly what needs testing.
+#
+#   docker compose up -d
+#   docker compose logs -f postgres
+#   docker compose down            (keeps your data)
+#   docker compose down -v         (deletes your data)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: netlink-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-netlink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netlink}
+      POSTGRES_DB: ${POSTGRES_DB:-netlink}
+      # Faster and safer defaults than the image's, for a dev database.
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    ports:
+      # Bound to localhost so the development database is not exposed to the
+      # rest of the network by an open Windows firewall rule.
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - netlink-postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-netlink} -d ${POSTGRES_DB:-netlink}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # A local mailbox so you can see the six-digit codes as real email during
+  # development, rather than reading them out of the API log.
+  # Web UI: http://localhost:8025
+  # Point the API at it with MAIL_TRANSPORT=smtp, SMTP_HOST=localhost, SMTP_PORT=1025.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: netlink-mailpit
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  netlink-postgres-data:
+    name: netlink-postgres-data

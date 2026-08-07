@@ -1,0 +1,238 @@
+.shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--nl-sidebar-width) minmax(0, 1fr);
+  height: 100%;
+}
+
+/* --- Sidebar ------------------------------------------------------------ */
+
+.shell__sidebar {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--nl-border);
+  background: rgba(7, 13, 28, 0.72);
+  backdrop-filter: blur(20px);
+  padding: var(--nl-space-5) var(--nl-space-3);
+}
+
+.shell__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  padding: 0 var(--nl-space-3) var(--nl-space-6);
+}
+
+.shell__brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(140deg, #5b8cff, #1d3fa8);
+  box-shadow: var(--nl-glow-primary);
+  position: relative;
+}
+
+.shell__brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 3px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+
+.shell__brand-name {
+  font-size: var(--nl-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.shell__nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.shell__nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  width: 100%;
+  padding: var(--nl-space-3);
+  background: none;
+  border: none;
+  border-radius: var(--nl-radius);
+  color: var(--nl-text-secondary);
+  font-size: var(--nl-text-sm);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background var(--nl-duration-fast) var(--nl-ease),
+    color var(--nl-duration-fast) var(--nl-ease);
+}
+
+.shell__nav-item:hover {
+  background: var(--nl-surface);
+  color: var(--nl-text);
+}
+
+.shell__nav-item--active {
+  background: var(--nl-primary-soft);
+  color: var(--nl-text);
+  font-weight: 600;
+}
+
+/* The cyan rail marks the current section without moving anything. */
+.shell__nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--nl-cyan);
+  box-shadow: var(--nl-glow-cyan);
+}
+
+.shell__nav-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.shell__nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The phase number for a section that is not built yet. */
+.shell__nav-phase {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--nl-radius-pill);
+  border: 1px dashed var(--nl-border-strong);
+  color: var(--nl-text-muted);
+  flex-shrink: 0;
+}
+
+.shell__sidebar-footer {
+  margin-top: auto;
+  padding-top: var(--nl-space-4);
+  border-top: 1px solid var(--nl-border);
+}
+
+.shell__account {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-2) var(--nl-space-3);
+  min-width: 0;
+}
+
+.shell__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--nl-primary-soft);
+  border: 1px solid var(--nl-border-strong);
+  color: var(--nl-text);
+  font-weight: 700;
+  font-size: var(--nl-text-sm);
+  flex-shrink: 0;
+}
+
+.shell__account-detail {
+  min-width: 0;
+}
+
+.shell__account-name {
+  font-size: var(--nl-text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell__account-email {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell__signout {
+  width: 100%;
+  margin-top: var(--nl-space-2);
+  padding: var(--nl-space-2) var(--nl-space-3);
+  background: none;
+  border: none;
+  border-radius: var(--nl-radius-sm);
+  color: var(--nl-text-muted);
+  font-size: var(--nl-text-xs);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--nl-duration-fast) var(--nl-ease);
+}
+
+.shell__signout:hover {
+  color: var(--nl-text);
+  background: var(--nl-surface);
+}
+
+/* --- Main --------------------------------------------------------------- */
+
+.shell__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shell__topbar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-4);
+  padding: var(--nl-space-6) var(--nl-space-8) var(--nl-space-5);
+  border-bottom: 1px solid var(--nl-border);
+  flex-wrap: wrap;
+}
+
+.shell__title {
+  font-size: var(--nl-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.shell__subtitle {
+  margin-top: 2px;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+}
+
+.shell__device {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  flex-wrap: wrap;
+}
+
+.shell__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--nl-space-6) var(--nl-space-8) var(--nl-space-10);
+}

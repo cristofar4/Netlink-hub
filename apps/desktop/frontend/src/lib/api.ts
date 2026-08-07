@@ -1,0 +1,266 @@
+import type {
+  AuthSuccessResponse,
+  AuthenticatedDevice,
+  AuthenticatedUser,
+  AuditPage,
+  ChallengeResponse,
+  DeviceIdentity,
+  LoginResponse,
+  SessionTokens,
+} from '@netlink/contracts';
+
+/**
+ * The NetLink control-plane client.
+ *
+ * Two things it does that a naive fetch wrapper would not:
+ *
+ *   * It refreshes an expired access token once, transparently, and retries the
+ *     request. Access tokens live fifteen minutes, so without this the app
+ *     would throw the user back to sign-in mid-session.
+ *   * It coalesces concurrent refreshes. Refresh tokens rotate and reuse is
+ *     treated as theft, so two parallel refreshes with the same token would
+ *     revoke the user's entire session.
+ */
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly fieldErrors?: Array<{ field: string; message: string }>,
+    readonly retryAfterSeconds?: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+
+  get isRateLimited(): boolean {
+    return this.status === 429;
+  }
+
+  get isUnauthorized(): boolean {
+    return this.status === 401;
+  }
+}
+
+export type StoredSession = {
+  user: AuthenticatedUser;
+  device: AuthenticatedDevice;
+  tokens: SessionTokens;
+};
+
+type SessionListener = (session: StoredSession | null) => void;
+
+export class NetLinkApi {
+  private session: StoredSession | null = null;
+  private refreshInFlight: Promise<SessionTokens> | null = null;
+  private readonly listeners = new Set<SessionListener>();
+
+  constructor(private baseUrl: string) {}
+
+  setBaseUrl(url: string): void {
+    this.baseUrl = url.replace(/\/$/, '');
+  }
+
+  getSession(): StoredSession | null {
+    return this.session;
+  }
+
+  setSession(session: StoredSession | null): void {
+    this.session = session;
+    for (const listener of this.listeners) listener(session);
+  }
+
+  onSessionChange(listener: SessionListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  // -------------------------------------------------------------------------
+  // Auth
+  // -------------------------------------------------------------------------
+
+  register(input: { name: string; email: string; password: string }): Promise<ChallengeResponse> {
+    return this.request('POST', '/auth/register', { body: input, auth: false });
+  }
+
+  verifyEmail(input: { challengeId: string; code: string }): Promise<{ verified: true }> {
+    return this.request('POST', '/auth/verify-email', { body: input, auth: false });
+  }
+
+  login(input: {
+    email: string;
+    password: string;
+    device: DeviceIdentity;
+  }): Promise<LoginResponse> {
+    return this.request('POST', '/auth/login', { body: input, auth: false });
+  }
+
+  async verifyDevice(input: {
+    challengeId: string;
+    code: string;
+    trustDevice: boolean;
+  }): Promise<AuthSuccessResponse> {
+    const response = await this.request<AuthSuccessResponse>('POST', '/auth/verify-device', {
+      body: input,
+      auth: false,
+    });
+    this.setSession({ user: response.user, device: response.device, tokens: response.tokens });
+    return response;
+  }
+
+  resendCode(challengeId: string): Promise<ChallengeResponse> {
+    return this.request('POST', '/auth/resend-code', { body: { challengeId }, auth: false });
+  }
+
+  me(): Promise<AuthenticatedUser> {
+    return this.request('GET', '/auth/me');
+  }
+
+  async logout(): Promise<void> {
+    const refreshToken = this.session?.tokens.refreshToken;
+    if (refreshToken) {
+      // A failure here still signs the user out locally — leaving them stuck in
+      // the app because the server was briefly unreachable would be worse.
+      try {
+        await this.request('POST', '/auth/logout', { body: { refreshToken }, auth: false });
+      } catch {
+        /* ignored deliberately */
+      }
+    }
+    this.setSession(null);
+  }
+
+  // -------------------------------------------------------------------------
+  // Devices and activity
+  // -------------------------------------------------------------------------
+
+  listDevices(): Promise<AuthenticatedDevice[]> {
+    return this.request('GET', '/devices');
+  }
+
+  renameDevice(id: string, name: string): Promise<AuthenticatedDevice> {
+    return this.request('PATCH', `/devices/${id}`, { body: { name } });
+  }
+
+  revokeDevice(id: string): Promise<AuthenticatedDevice> {
+    return this.request('DELETE', `/devices/${id}`);
+  }
+
+  activity(limit = 50, cursor?: string): Promise<AuditPage> {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (cursor) query.set('cursor', cursor);
+    return this.request('GET', `/activity?${query.toString()}`);
+  }
+
+  health(): Promise<{ status: string; components: Record<string, { status: string }> }> {
+    return this.request('GET', '/health', { auth: false });
+  }
+
+  // -------------------------------------------------------------------------
+  // Transport
+  // -------------------------------------------------------------------------
+
+  private async request<T>(
+    method: string,
+    path: string,
+    options: { body?: unknown; auth?: boolean; retryOn401?: boolean } = {},
+  ): Promise<T> {
+    const { body, auth = true, retryOn401 = true } = options;
+
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (auth && this.session) {
+      headers.Authorization = `Bearer ${this.session.tokens.accessToken}`;
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch {
+      throw new ApiError(
+        'NetLink could not reach the server. Check your connection and try again.',
+        0,
+      );
+    }
+
+    if (response.status === 401 && auth && retryOn401 && this.session) {
+      // One transparent refresh, then replay the original request. `retryOn401`
+      // is false on the replay, so a genuinely dead session fails rather than
+      // looping.
+      try {
+        await this.refresh();
+      } catch {
+        this.setSession(null);
+        throw new ApiError('Your session has expired. Please sign in again.', 401);
+      }
+      return this.request<T>(method, path, { ...options, retryOn401: false });
+    }
+
+    return this.parse<T>(response);
+  }
+
+  private async parse<T>(response: Response): Promise<T> {
+    const text = await response.text();
+    let payload: unknown = null;
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = null;
+      }
+    }
+
+    if (!response.ok) {
+      const detail = payload as {
+        message?: string | string[];
+        errors?: Array<{ field: string; message: string }>;
+        retryAfterSeconds?: number;
+      } | null;
+
+      const message = Array.isArray(detail?.message)
+        ? detail.message.join(' ')
+        : (detail?.message ?? `Request failed with status ${response.status}`);
+
+      throw new ApiError(message, response.status, detail?.errors, detail?.retryAfterSeconds);
+    }
+
+    return payload as T;
+  }
+
+  /**
+   * Rotates the refresh token, coalescing concurrent callers onto one request.
+   *
+   * Without the coalescing, two requests expiring together would each present
+   * the same refresh token; the second would look like token reuse to the
+   * server, which revokes the whole session lineage by design.
+   */
+  private async refresh(): Promise<SessionTokens> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+
+    const current = this.session;
+    if (!current) throw new ApiError('Not signed in.', 401);
+
+    this.refreshInFlight = (async () => {
+      try {
+        const tokens = await this.request<SessionTokens>('POST', '/auth/refresh', {
+          body: { refreshToken: current.tokens.refreshToken },
+          auth: false,
+        });
+        this.setSession({ ...current, tokens });
+        return tokens;
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+
+    return this.refreshInFlight;
+  }
+}
+
+export const api = new NetLinkApi(
+  import.meta.env.VITE_NETLINK_API_URL ?? 'http://127.0.0.1:4000/api',
+);

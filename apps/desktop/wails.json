@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "NetLink",
+  "outputfilename": "NetLink",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "NetLink"
+  },
+  "info": {
+    "companyName": "NetLink",
+    "productName": "NetLink",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2026 NetLink",
+    "comments": "Secure remote access to your own computers, files, printers and shared data."
+  }
+}

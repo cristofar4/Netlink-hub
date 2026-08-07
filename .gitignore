@@ -1,0 +1,42 @@
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Wails
+apps/desktop/build/bin/
+apps/desktop/frontend/dist/
+apps/desktop/frontend/wailsjs/
+
+# Go — `go build ./...` drops an extension-less binary named after the module
+# directory, which is easy to commit by accident.
+/apps/desktop/desktop
+/services/agent/agent
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+services/agent/bin/
+services/relay/bin/
+
+# Local runtime state (device private keys must never be committed)
+*.netlink-identity
+.netlink/
+tmp/
+.tmp/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

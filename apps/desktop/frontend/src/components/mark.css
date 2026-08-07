@@ -1,0 +1,38 @@
+.netlink-mark {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* The dash offset animates so the cyan paths read as flowing towards the hub.
+ * --nl-flow-duration is 0s under reduced motion, which stops it dead. */
+.netlink-mark__flow {
+  animation: nl-flow var(--nl-flow-duration) linear infinite;
+}
+
+@keyframes nl-flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.netlink-mark__pulse {
+  transform-origin: 150px 130px;
+  animation: nl-mark-pulse var(--nl-pulse-duration) var(--nl-ease) infinite;
+}
+
+@keyframes nl-mark-pulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}

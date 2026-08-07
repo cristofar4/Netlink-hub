@@ -1,0 +1,61 @@
+{
+  "name": "@netlink/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NetLink cloud control plane — modular monolith (NestJS + Prisma + PostgreSQL).",
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "test": "jest --config jest.config.js",
+    "test:unit": "jest --config jest.config.js --testPathIgnorePatterns \"/test/integration/\"",
+    "test:integration": "jest --config jest.config.js --runInBand --testPathPatterns \"test/integration\"",
+    "test:watch": "jest --config jest.config.js --watch",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset --force",
+    "db:seed": "ts-node prisma/seed.ts",
+    "openapi:export": "ts-node scripts/export-openapi.ts"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.28",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.1.28",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.1.28",
+    "@nestjs/swagger": "11.4.6",
+    "@netlink/contracts": "0.1.0",
+    "@node-rs/argon2": "2.0.2",
+    "@prisma/client": "6.19.3",
+    "helmet": "8.3.0",
+    "nodemailer": "9.0.5",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.24",
+    "@nestjs/schematics": "11.1.0",
+    "@nestjs/testing": "11.1.28",
+    "@types/express": "5.0.5",
+    "@types/jest": "30.0.0",
+    "@types/node": "22.20.1",
+    "@types/nodemailer": "8.0.1",
+    "@types/supertest": "6.0.3",
+    "eslint": "9.39.5",
+    "jest": "30.4.2",
+    "prisma": "6.19.3",
+    "supertest": "7.2.2",
+    "ts-jest": "29.4.12",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.66.0"
+  }
+}

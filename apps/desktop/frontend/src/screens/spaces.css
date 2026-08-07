@@ -1,0 +1,246 @@
+.spaces {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-6);
+}
+
+.spaces__hero {
+  padding: var(--nl-space-6);
+}
+
+.spaces__hero-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-4);
+  flex-wrap: wrap;
+}
+
+.spaces__space-name {
+  font-size: var(--nl-text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* --- The map ------------------------------------------------------------ */
+
+.spaces__map {
+  position: relative;
+  margin-top: var(--nl-space-6);
+  /* Locks the SVG aspect ratio so the absolutely-positioned nodes, which are
+   * placed in percentages, always land on their line ends. */
+  aspect-ratio: 880 / 400;
+  width: 100%;
+}
+
+.spaces__map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Live connections flow towards the hub. --nl-flow-duration is 0s under
+ * reduced motion, which leaves a static dashed line. */
+.spaces__edge--flow {
+  animation: nl-flow var(--nl-flow-duration) linear infinite;
+}
+
+@keyframes nl-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.spaces__core-pulse {
+  transform-origin: 440px 200px;
+  animation: nl-core-pulse var(--nl-pulse-duration) var(--nl-ease) infinite;
+}
+
+@keyframes nl-core-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+.spaces__core-label {
+  fill: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--nl-font);
+}
+
+.spaces__core-sub {
+  fill: rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-family: var(--nl-font);
+}
+
+/* --- Map nodes ---------------------------------------------------------- */
+
+.spaces__node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 132px;
+  padding: var(--nl-space-3);
+  background: var(--nl-surface-strong);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius);
+  color: var(--nl-text);
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--nl-shadow-sm);
+  transition:
+    border-color var(--nl-duration) var(--nl-ease),
+    box-shadow var(--nl-duration) var(--nl-ease),
+    transform var(--nl-duration) var(--nl-ease);
+}
+
+.spaces__node:hover {
+  border-color: var(--nl-border-strong);
+  box-shadow: var(--nl-shadow);
+  transform: translate(-50%, calc(-50% - 2px));
+}
+
+.spaces__node-head {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+}
+
+.spaces__node-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nl-offline);
+  flex-shrink: 0;
+}
+
+.spaces__node--online .spaces__node-dot {
+  background: var(--nl-success);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.6);
+}
+
+.spaces__node--warning .spaces__node-dot {
+  background: var(--nl-warning);
+}
+
+.spaces__node-label {
+  font-size: var(--nl-text-sm);
+  font-weight: 600;
+}
+
+.spaces__node-detail {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-secondary);
+}
+
+.spaces__node-phase {
+  margin-top: 2px;
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--nl-radius-pill);
+  border: 1px dashed var(--nl-border-strong);
+  color: var(--nl-text-muted);
+}
+
+/* --- Cards below the map ------------------------------------------------ */
+
+.spaces__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--nl-space-6);
+}
+
+.spaces__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--nl-space-4);
+  margin: 0;
+}
+
+.spaces__facts dt {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.spaces__facts dd {
+  margin: 4px 0 0;
+  font-size: var(--nl-text-xl);
+  font-weight: 700;
+}
+
+.spaces__fact-ok {
+  font-size: var(--nl-text-sm) !important;
+  font-weight: 600 !important;
+  color: var(--nl-success);
+}
+
+.spaces__checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--nl-space-3);
+}
+
+.spaces__checklist-item {
+  position: relative;
+  padding-left: 26px;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  flex-wrap: wrap;
+}
+
+.spaces__checklist-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--nl-border-strong);
+}
+
+.spaces__checklist-item--done {
+  color: var(--nl-text);
+}
+
+.spaces__checklist-item--done::before {
+  background: var(--nl-success-soft);
+  border-color: var(--nl-success);
+}
+
+.spaces__checklist-item--done::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  width: 5px;
+  height: 3px;
+  border-left: 1.5px solid var(--nl-success);
+  border-bottom: 1.5px solid var(--nl-success);
+  transform: rotate(-45deg);
+}

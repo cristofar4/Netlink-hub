@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    // vite/client supplies import.meta.env and the CSS side-effect imports.
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@netlink/contracts": ["../../../packages/contracts/src/index.ts"],
+      "@netlink/ui": ["../../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["src", "../../../packages/ui/src", "../../../packages/contracts/src"],
+  "exclude": ["../../../packages/contracts/src/**/*.test.ts"]
+}

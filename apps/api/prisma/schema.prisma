@@ -1,0 +1,307 @@
+// NetLink control-plane data model.
+//
+// Storage rules enforced by this schema:
+//   * Passwords are stored only as Argon2id hashes (`User.passwordHash`).
+//   * OTP codes are stored only as SHA-256 hashes (`Challenge.codeHash`).
+//   * Refresh tokens are stored only as SHA-256 hashes (`RefreshToken.tokenHash`).
+//   * Device private keys are never stored here at all — only `Device.publicKey`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  // Argon2id PHC string. Never a raw or reversible password.
+  passwordHash  String
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  disabledAt    DateTime?
+
+  devices           Device[]
+  challenges        Challenge[]
+  refreshTokens     RefreshToken[]
+  auditEvents       AuditEvent[]       @relation("AuditActor")
+  ownedSpaces       Space[]            @relation("SpaceOwner")
+  memberships       SpaceMember[]
+  createdInvites    Invitation[]       @relation("InvitationCreatedBy")
+
+  @@index([email])
+  @@map("users")
+}
+
+enum DevicePlatform {
+  windows
+  macos
+  linux
+  web
+  android
+  ios
+}
+
+enum DeviceKind {
+  desktop
+  agent
+  mobile
+  browser
+}
+
+/// One row per NetLink installation. Every device holds its own Ed25519 key
+/// pair; the private half stays on the device (Windows DPAPI), and only
+/// `publicKey` reaches the server. Revoking one row never touches another.
+model Device {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installationId String
+  name           String
+  platform       DevicePlatform
+  kind           DeviceKind     @default(desktop)
+  osVersion      String?
+  appVersion     String?
+  // Base64url Ed25519 public key. Unique across the whole system so a key can
+  // never be silently re-registered against a second account.
+  publicKey      String         @unique
+  trusted        Boolean        @default(false)
+  trustedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  lastSeenAt     DateTime?
+  revokedAt      DateTime?
+  // Coarse, city-level at best. Derived from the request IP, never GPS.
+  approximateLocation String?
+  lastIpAddress       String?
+
+  refreshTokens RefreshToken[]
+  challenges    Challenge[]
+  agent         Agent?
+
+  @@unique([userId, installationId])
+  @@index([userId])
+  @@map("devices")
+}
+
+// ---------------------------------------------------------------------------
+// Verification challenges (six-digit email codes)
+// ---------------------------------------------------------------------------
+
+enum ChallengePurpose {
+  email_verification
+  device_verification
+  step_up
+}
+
+/// A pending six-digit code. The code itself is never stored — only a SHA-256
+/// hash of it, so a database read cannot reveal a live code.
+model Challenge {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId  String?
+  device    Device?          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  purpose   ChallengePurpose
+  codeHash  String
+  expiresAt DateTime
+  // Set the moment a code is accepted, which makes the code single-use.
+  consumedAt DateTime?
+  attempts   Int      @default(0)
+  maxAttempts Int     @default(5)
+  resendCount Int     @default(0)
+  lastSentAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  // Carried through device verification so "Trust This Device" survives the
+  // round trip without the client being able to alter the pending device.
+  pendingDeviceName String?
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+  @@map("challenges")
+}
+
+// ---------------------------------------------------------------------------
+// Sessions
+// ---------------------------------------------------------------------------
+
+/// Rotating refresh tokens. Each use issues a successor and marks the parent
+/// rotated; presenting an already-rotated token is treated as theft and kills
+/// the whole chain.
+model RefreshToken {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId     String
+  device       Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique
+  // Every token in one login lineage shares a family id, so a detected reuse
+  // can revoke exactly that lineage and nothing else.
+  familyId     String
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  rotatedAt    DateTime?
+  revokedAt    DateTime?
+  revokedReason String?
+  replacedById String?   @unique
+
+  @@index([userId, deviceId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Spaces, agents and membership
+// ---------------------------------------------------------------------------
+
+/// A location: My Home, My Office, My Shop.
+model Space {
+  id        String   @id @default(uuid())
+  ownerId   String
+  owner     User     @relation("SpaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     SpaceMember[]
+  agents      Agent[]
+  invitations Invitation[]
+  auditEvents AuditEvent[]
+
+  @@index([ownerId])
+  @@map("spaces")
+}
+
+enum PrincipalRole {
+  owner
+  trusted_device
+  invited_member
+}
+
+/// Grants held by a person inside a Space. `permissions` is the complete,
+/// explicit capability list — an empty array means the member can do nothing.
+model SpaceMember {
+  id          String        @id @default(uuid())
+  spaceId     String
+  space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        PrincipalRole
+  permissions String[]      @default([])
+  suspended   Boolean       @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([spaceId, userId])
+  @@index([spaceId])
+  @@map("space_members")
+}
+
+enum AgentStatus {
+  offline
+  online
+  unreachable
+}
+
+/// The background service half of a NetLink installation. Registered in
+/// Phase 2; the row exists now so device enrollment has somewhere to point.
+model Agent {
+  id            String      @id @default(uuid())
+  spaceId       String
+  space         Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  deviceId      String      @unique
+  device        Device      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  status        AgentStatus @default(offline)
+  lastHeartbeatAt DateTime?
+  // Registered out-of-band by the owner, used for Wake-on-LAN targeting.
+  macAddress    String?
+  localIpAddress String?
+  isWakeHelper  Boolean     @default(false)
+  wakeOnLanReady Boolean    @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([spaceId])
+  @@map("agents")
+}
+
+// ---------------------------------------------------------------------------
+// Invitations (NetLink Passes)
+// ---------------------------------------------------------------------------
+
+enum InvitationStatus {
+  pending
+  claimed
+  revoked
+  expired
+}
+
+/// A NetLink Pass. The claim token is stored hashed and can be redeemed once.
+model Invitation {
+  id            String           @id @default(uuid())
+  spaceId       String
+  space         Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdById   String
+  createdBy     User             @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  inviteeEmail  String?
+  tokenHash     String           @unique
+  permissions   String[]         @default([])
+  status        InvitationStatus @default(pending)
+  allowResharing Boolean         @default(false)
+  expiresAt     DateTime
+  claimedAt     DateTime?
+  claimedByUserId String?
+  revokedAt     DateTime?
+  createdAt     DateTime         @default(now())
+
+  // Data-Only pass terms. Null for passes that are not data allocations.
+  totalDataBytes Decimal? @db.Decimal(20, 0)
+  dailyDataBytes Decimal? @db.Decimal(20, 0)
+
+  @@index([spaceId, status])
+  @@map("invitations")
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+enum AuditOutcome {
+  success
+  failure
+  denied
+}
+
+/// Append-only record of security-relevant activity. Carries no file contents,
+/// message text, credentials or precise location — only what happened.
+model AuditEvent {
+  id            String       @id @default(uuid())
+  action        String
+  outcome       AuditOutcome
+  actorUserId   String?
+  actorUser     User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorDeviceId String?
+  targetDeviceId String?
+  spaceId       String?
+  space         Space?       @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  ipAddress     String?
+  userAgent     String?
+  approximateLocation String?
+  metadata      Json?
+  createdAt     DateTime     @default(now())
+
+  @@index([actorUserId, createdAt])
+  @@index([spaceId, createdAt])
+  @@index([action])
+  @@map("audit_events")
+}

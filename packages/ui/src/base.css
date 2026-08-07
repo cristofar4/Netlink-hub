@@ -1,0 +1,551 @@
+/*
+ * NetLink base layer: reset, application chrome and the shared component
+ * classes. Every value here comes from tokens.css.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--nl-bg);
+  color: var(--nl-text);
+  font-family: var(--nl-font);
+  font-size: var(--nl-text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* A faint navy aurora so the flat ground does not read as a dead rectangle.
+ * Static — it is texture, not animation. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 12% -10%, rgba(47, 107, 255, 0.16), transparent 65%),
+    radial-gradient(700px 500px at 100% 8%, rgba(34, 211, 238, 0.09), transparent 60%);
+  z-index: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--nl-focus-ring);
+  border-radius: var(--nl-radius-sm);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Surfaces                                                                  */
+/* ------------------------------------------------------------------------ */
+
+.nl-card {
+  position: relative;
+  background: var(--nl-surface);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius-lg);
+  padding: var(--nl-space-6);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--nl-shadow);
+}
+
+.nl-card--interactive {
+  cursor: pointer;
+  transition:
+    border-color var(--nl-duration) var(--nl-ease),
+    transform var(--nl-duration) var(--nl-ease),
+    box-shadow var(--nl-duration) var(--nl-ease);
+}
+
+.nl-card--interactive:hover {
+  border-color: var(--nl-border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--nl-shadow-lg);
+}
+
+.nl-card__title {
+  font-size: var(--nl-text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.nl-card__subtitle {
+  color: var(--nl-text-secondary);
+  font-size: var(--nl-text-sm);
+  margin-top: var(--nl-space-1);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Buttons                                                                   */
+/* ------------------------------------------------------------------------ */
+
+.nl-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nl-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--nl-radius);
+  padding: 0 var(--nl-space-5);
+  height: 40px;
+  font-size: var(--nl-text-base);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--nl-duration-fast) var(--nl-ease),
+    border-color var(--nl-duration-fast) var(--nl-ease),
+    box-shadow var(--nl-duration-fast) var(--nl-ease),
+    transform var(--nl-duration-fast) var(--nl-ease);
+}
+
+.nl-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.nl-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nl-button--primary {
+  background: var(--nl-primary);
+  color: var(--nl-text-on-primary);
+  box-shadow: 0 6px 20px rgba(47, 107, 255, 0.28);
+}
+
+.nl-button--primary:hover:not(:disabled) {
+  background: var(--nl-primary-hover);
+}
+
+.nl-button--secondary {
+  background: var(--nl-surface-strong);
+  border-color: var(--nl-border);
+  color: var(--nl-text);
+}
+
+.nl-button--secondary:hover:not(:disabled) {
+  background: var(--nl-surface-hover);
+  border-color: var(--nl-border-strong);
+}
+
+.nl-button--ghost {
+  background: transparent;
+  color: var(--nl-text-secondary);
+}
+
+.nl-button--ghost:hover:not(:disabled) {
+  background: var(--nl-surface);
+  color: var(--nl-text);
+}
+
+/* Red is reserved for actions that destroy or remove something. */
+.nl-button--danger {
+  background: transparent;
+  border-color: var(--nl-danger);
+  color: var(--nl-danger);
+}
+
+.nl-button--danger:hover:not(:disabled) {
+  background: var(--nl-danger-soft);
+  color: var(--nl-danger-hover);
+}
+
+.nl-button--block {
+  width: 100%;
+}
+
+.nl-button--sm {
+  height: 32px;
+  padding: 0 var(--nl-space-3);
+  font-size: var(--nl-text-sm);
+}
+
+.nl-button--lg {
+  height: 46px;
+  font-size: var(--nl-text-lg);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Fields                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.nl-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-2);
+}
+
+.nl-field__label {
+  font-size: var(--nl-text-sm);
+  font-weight: 600;
+  color: var(--nl-text-secondary);
+}
+
+.nl-field__hint {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.nl-field__error {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-danger);
+}
+
+.nl-input {
+  height: 44px;
+  width: 100%;
+  padding: 0 var(--nl-space-4);
+  background: var(--nl-surface-sunken);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius);
+  color: var(--nl-text);
+  transition:
+    border-color var(--nl-duration-fast) var(--nl-ease),
+    box-shadow var(--nl-duration-fast) var(--nl-ease);
+}
+
+.nl-input::placeholder {
+  color: var(--nl-text-muted);
+}
+
+.nl-input:hover:not(:disabled) {
+  border-color: var(--nl-border-strong);
+}
+
+.nl-input:focus {
+  outline: none;
+  border-color: var(--nl-primary);
+  box-shadow: 0 0 0 3px var(--nl-primary-soft);
+}
+
+.nl-input[aria-invalid='true'] {
+  border-color: var(--nl-danger);
+}
+
+.nl-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Six-digit code entry                                                      */
+/* ------------------------------------------------------------------------ */
+
+.nl-otp {
+  display: flex;
+  gap: var(--nl-space-3);
+  justify-content: center;
+}
+
+.nl-otp__cell {
+  width: 52px;
+  height: 62px;
+  text-align: center;
+  font-size: var(--nl-text-2xl);
+  font-weight: 700;
+  font-family: var(--nl-font-mono);
+  background: var(--nl-surface-sunken);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius);
+  color: var(--nl-text);
+  transition:
+    border-color var(--nl-duration-fast) var(--nl-ease),
+    box-shadow var(--nl-duration-fast) var(--nl-ease);
+}
+
+.nl-otp__cell:focus {
+  outline: none;
+  border-color: var(--nl-primary);
+  box-shadow: 0 0 0 3px var(--nl-primary-soft);
+}
+
+.nl-otp__cell--filled {
+  border-color: var(--nl-cyan-dim);
+}
+
+.nl-otp[data-invalid='true'] .nl-otp__cell {
+  border-color: var(--nl-danger);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Status                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.nl-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  font-size: var(--nl-text-sm);
+  font-weight: 600;
+}
+
+.nl-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nl-offline);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.nl-status--online .nl-status__dot,
+.nl-status--secure .nl-status__dot {
+  background: var(--nl-success);
+}
+
+.nl-status--warning .nl-status__dot {
+  background: var(--nl-warning);
+}
+
+.nl-status--danger .nl-status__dot {
+  background: var(--nl-danger);
+}
+
+.nl-status--connecting .nl-status__dot {
+  background: var(--nl-cyan);
+}
+
+.nl-status--online {
+  color: var(--nl-success);
+}
+
+.nl-status--secure {
+  color: var(--nl-success);
+}
+
+.nl-status--warning {
+  color: var(--nl-warning);
+}
+
+.nl-status--danger {
+  color: var(--nl-danger);
+}
+
+.nl-status--connecting {
+  color: var(--nl-cyan);
+}
+
+.nl-status--offline {
+  color: var(--nl-text-muted);
+}
+
+/* The pulse says "this is live right now". Under reduced motion the duration
+ * token is 0s, so the ring simply never appears. */
+.nl-status--online .nl-status__dot::after,
+.nl-status--connecting .nl-status__dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: nl-pulse var(--nl-pulse-duration) var(--nl-ease) infinite;
+}
+
+@keyframes nl-pulse {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.7);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Badges and pills                                                          */
+/* ------------------------------------------------------------------------ */
+
+.nl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nl-space-1);
+  padding: 3px var(--nl-space-3);
+  border-radius: var(--nl-radius-pill);
+  font-size: var(--nl-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--nl-surface-strong);
+  color: var(--nl-text-secondary);
+  border: 1px solid var(--nl-border);
+}
+
+.nl-badge--success {
+  background: var(--nl-success-soft);
+  color: var(--nl-success);
+  border-color: transparent;
+}
+
+.nl-badge--primary {
+  background: var(--nl-primary-soft);
+  color: var(--nl-primary-hover);
+  border-color: transparent;
+}
+
+.nl-badge--cyan {
+  background: var(--nl-cyan-faint);
+  color: var(--nl-cyan);
+  border-color: transparent;
+}
+
+.nl-badge--warning {
+  background: var(--nl-warning-soft);
+  color: var(--nl-warning);
+  border-color: transparent;
+}
+
+.nl-badge--danger {
+  background: var(--nl-danger-soft);
+  color: var(--nl-danger);
+  border-color: transparent;
+}
+
+/* Marks a control that is deliberately not wired up yet. Every such control in
+ * the app carries this, so nothing looks broken or dishonestly finished. */
+.nl-badge--later {
+  background: transparent;
+  border: 1px dashed var(--nl-border-strong);
+  color: var(--nl-text-muted);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Alerts                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.nl-alert {
+  display: flex;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-4);
+  border-radius: var(--nl-radius);
+  font-size: var(--nl-text-sm);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+  color: var(--nl-text-secondary);
+}
+
+.nl-alert--error {
+  border-color: rgba(244, 63, 94, 0.4);
+  background: var(--nl-danger-soft);
+  color: #ffc9d3;
+}
+
+.nl-alert--success {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: var(--nl-success-soft);
+  color: #b6f5de;
+}
+
+.nl-alert--info {
+  border-color: var(--nl-cyan-dim);
+  background: var(--nl-cyan-faint);
+  color: #b7efff;
+}
+
+.nl-alert--warning {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: var(--nl-warning-soft);
+  color: #ffe6ad;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Layout helpers                                                            */
+/* ------------------------------------------------------------------------ */
+
+.nl-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.nl-row {
+  display: flex;
+  align-items: center;
+}
+
+.nl-spacer {
+  flex: 1;
+}
+
+.nl-muted {
+  color: var(--nl-text-secondary);
+}
+
+.nl-dim {
+  color: var(--nl-text-muted);
+}
+
+.nl-mono {
+  font-family: var(--nl-font-mono);
+}
+
+.nl-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Spinner                                                                   */
+/* ------------------------------------------------------------------------ */
+
+.nl-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-top-color: currentColor;
+  animation: nl-spin 700ms linear infinite;
+}
+
+@keyframes nl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* A spinner with no motion communicates nothing, so it becomes a static
+   * ring and the surrounding copy carries the "working" message instead. */
+  .nl-spinner {
+    animation: none;
+    border-top-color: rgba(255, 255, 255, 0.28);
+  }
+}

@@ -1,0 +1,152 @@
+/*
+ * NetLink design tokens.
+ *
+ * Every colour, radius, spacing step and motion duration in the product comes
+ * from here. Components never hard-code a hex value, so the visual direction is
+ * changed in one place rather than hunted through the app.
+ *
+ * The palette is dark-first by design: NetLink is a control surface people
+ * glance at, and a deep navy ground makes the cyan connection lines and the
+ * green online indicators the things the eye lands on.
+ */
+
+:root {
+  /* --- Ground ---------------------------------------------------------- */
+  /* Deep navy application background, with two deeper wells for insets. */
+  --nl-bg: #060b18;
+  --nl-bg-deep: #04070f;
+  --nl-bg-raised: #0a1226;
+
+  /* --- Surfaces: dark blue glass --------------------------------------- */
+  --nl-surface: rgba(16, 28, 54, 0.72);
+  --nl-surface-strong: rgba(20, 35, 66, 0.92);
+  --nl-surface-hover: rgba(24, 42, 78, 0.85);
+  --nl-surface-sunken: rgba(8, 16, 33, 0.72);
+  --nl-border: rgba(94, 132, 199, 0.22);
+  --nl-border-strong: rgba(120, 165, 240, 0.38);
+
+  /* --- Brand ----------------------------------------------------------- */
+  /* Electric blue drives primary actions; cyan is reserved for connections. */
+  --nl-primary: #2f6bff;
+  --nl-primary-hover: #4880ff;
+  --nl-primary-active: #1d55e0;
+  --nl-primary-soft: rgba(47, 107, 255, 0.16);
+  --nl-primary-ring: rgba(47, 107, 255, 0.45);
+
+  --nl-cyan: #22d3ee;
+  --nl-cyan-dim: rgba(34, 211, 238, 0.35);
+  --nl-cyan-faint: rgba(34, 211, 238, 0.12);
+
+  /* --- Status ---------------------------------------------------------- */
+  /* Green means secure and online. Red is reserved for danger — never for
+   * decoration, and never for a merely-offline state. */
+  --nl-success: #34d399;
+  --nl-success-soft: rgba(52, 211, 153, 0.15);
+  --nl-warning: #fbbf24;
+  --nl-warning-soft: rgba(251, 191, 36, 0.15);
+  --nl-danger: #f43f5e;
+  --nl-danger-hover: #fb5570;
+  --nl-danger-soft: rgba(244, 63, 94, 0.14);
+  /* Offline is absence, not alarm — a muted grey, not red. */
+  --nl-offline: #64748b;
+  --nl-offline-soft: rgba(100, 116, 139, 0.18);
+
+  /* --- Text ------------------------------------------------------------ */
+  --nl-text: #f2f6ff;
+  --nl-text-secondary: #a3b5d4;
+  --nl-text-muted: #6f84a8;
+  --nl-text-on-primary: #ffffff;
+
+  /* --- Shape ----------------------------------------------------------- */
+  --nl-radius-sm: 8px;
+  --nl-radius: 14px;
+  --nl-radius-lg: 20px;
+  --nl-radius-xl: 28px;
+  --nl-radius-pill: 999px;
+
+  /* --- Spacing (4px base) ---------------------------------------------- */
+  --nl-space-1: 4px;
+  --nl-space-2: 8px;
+  --nl-space-3: 12px;
+  --nl-space-4: 16px;
+  --nl-space-5: 20px;
+  --nl-space-6: 24px;
+  --nl-space-8: 32px;
+  --nl-space-10: 40px;
+  --nl-space-12: 48px;
+
+  /* --- Type ------------------------------------------------------------ */
+  --nl-font: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --nl-font-mono: 'Cascadia Code', 'Consolas', ui-monospace, monospace;
+  --nl-text-xs: 11px;
+  --nl-text-sm: 13px;
+  --nl-text-base: 14px;
+  --nl-text-lg: 16px;
+  --nl-text-xl: 20px;
+  --nl-text-2xl: 26px;
+  --nl-text-3xl: 34px;
+
+  /* --- Elevation ------------------------------------------------------- */
+  --nl-shadow-sm: 0 1px 2px rgba(2, 6, 16, 0.4);
+  --nl-shadow: 0 8px 24px rgba(2, 6, 16, 0.45);
+  --nl-shadow-lg: 0 20px 48px rgba(2, 6, 16, 0.55);
+  --nl-glow-primary: 0 0 0 1px var(--nl-primary-ring), 0 8px 28px rgba(47, 107, 255, 0.28);
+  --nl-glow-cyan: 0 0 18px rgba(34, 211, 238, 0.35);
+
+  /* --- Motion ---------------------------------------------------------- */
+  /* Durations are short on purpose. Motion here explains state changes; it is
+   * never the reason a user waits. */
+  --nl-duration-fast: 120ms;
+  --nl-duration: 200ms;
+  --nl-duration-slow: 320ms;
+  --nl-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Ambient loops (connection paths, status pulses). Overridden to `0s` under
+   * reduced motion, which stops them without changing any layout. */
+  --nl-pulse-duration: 2.4s;
+  --nl-flow-duration: 3s;
+
+  --nl-focus-ring: 0 0 0 2px var(--nl-bg), 0 0 0 4px var(--nl-primary);
+
+  /* --- Layout ---------------------------------------------------------- */
+  --nl-sidebar-width: 244px;
+  --nl-titlebar-height: 38px;
+}
+
+/*
+ * Reduced motion.
+ *
+ * Ambient animation is switched off at the token level, so a component gets
+ * the accessible behaviour without knowing the preference exists. Transitions
+ * are collapsed rather than removed so state changes still land instantly
+ * instead of appearing broken.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --nl-duration-fast: 1ms;
+    --nl-duration: 1ms;
+    --nl-duration-slow: 1ms;
+    --nl-pulse-duration: 0s;
+    --nl-flow-duration: 0s;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Windows high-contrast mode. Glass surfaces disappear entirely there, so the
+ * borders that carry structure are made explicit rather than decorative.
+ */
+@media (forced-colors: active) {
+  :root {
+    --nl-border: CanvasText;
+    --nl-border-strong: CanvasText;
+  }
+}

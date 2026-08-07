@@ -1,0 +1,44 @@
+{
+  "name": "netlink",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NetLink — secure remote access to your home or office computers, files, printers and shared data.",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/contracts",
+    "packages/ui",
+    "apps/api",
+    "apps/desktop/frontend"
+  ],
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspace=@netlink/contracts && npm run build --workspace=@netlink/ui && npm run build --workspace=@netlink/api && npm run build --workspace=@netlink/desktop-frontend",
+    "build:contracts": "npm run build --workspace=@netlink/contracts",
+    "build:ui": "npm run build --workspace=@netlink/ui",
+    "build:api": "npm run build --workspace=@netlink/api",
+    "build:frontend": "npm run build --workspace=@netlink/desktop-frontend",
+    "test": "npm run test --workspace=@netlink/contracts && npm run test --workspace=@netlink/api && npm run test --workspace=@netlink/desktop-frontend",
+    "test:api": "npm run test --workspace=@netlink/api",
+    "test:frontend": "npm run test --workspace=@netlink/desktop-frontend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,css,md}\"",
+    "db:generate": "npm run db:generate --workspace=@netlink/api",
+    "db:migrate": "npm run db:migrate --workspace=@netlink/api",
+    "db:seed": "npm run db:seed --workspace=@netlink/api",
+    "dev:api": "npm run dev --workspace=@netlink/api"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "@nestjs/swagger": {
+      "js-yaml": "5.2.3"
+    }
+  }
+}
