@@ -13,6 +13,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -40,6 +41,8 @@ func main() {
 		name     = flag.String("name", defaultDeviceName(), "name shown for this device in NetLink")
 		interval = flag.Duration("heartbeat", envDuration("NETLINK_HEARTBEAT_SECONDS", 30*time.Second), "heartbeat interval")
 		verbose  = flag.Bool("v", false, "verbose logging")
+		token    = flag.String("token", "", "enrollment token from the NetLink window (enroll only)")
+		helper   = flag.Bool("wake-helper", false, "offer this computer as a Wake Helper for its local network")
 	)
 
 	// The subcommand is pulled out before parsing so flags work on either side
@@ -57,18 +60,26 @@ func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 
 	cfg := agent.Config{
-		APIBaseURL:     *apiURL,
-		DataDir:        *dataDir,
-		DeviceName:     *name,
-		AppVersion:     Version,
-		HeartbeatEvery: *interval,
-		Logger:         log,
+		APIBaseURL:      *apiURL,
+		DataDir:         *dataDir,
+		DeviceName:      *name,
+		AppVersion:      Version,
+		HeartbeatEvery:  *interval,
+		Logger:          log,
+		EnrollmentToken: *token,
+		WakeHelper:      *helper,
 	}
 
 	switch command {
 	case "run":
 		if err := runService(cfg, log); err != nil {
 			log.Error("agent stopped with an error", "error", err)
+			os.Exit(1)
+		}
+
+	case "enroll":
+		if err := enroll(cfg); err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 
@@ -104,7 +115,7 @@ func main() {
 // knownCommands is the complete verb list. Anything else is a usage error
 // rather than being silently treated as "run".
 var knownCommands = map[string]bool{
-	"run": true, "status": true, "reset": true,
+	"run": true, "status": true, "reset": true, "enroll": true,
 	"install": true, "uninstall": true, "version": true,
 }
 
@@ -147,6 +158,30 @@ func runForeground(cfg agent.Config, log *slog.Logger) error {
 	return a.Run(ctx)
 }
 
+// enroll joins a Space with a token minted by the NetLink window.
+//
+// The token is used once and never written to disk — from here on this
+// installation proves itself with its own device key.
+func enroll(cfg agent.Config) error {
+	if cfg.EnrollmentToken == "" {
+		return errors.New("netlink: pass the enrollment token with --token (get one from Settings in the NetLink window)")
+	}
+	a, err := agent.New(cfg)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	record, err := a.Enroll(ctx, cfg.EnrollmentToken)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Enrolled into %q. This computer will now report as online.\n", record.SpaceName)
+	return nil
+}
+
 func printStatus(cfg agent.Config) error {
 	a, err := agent.New(cfg)
 	if err != nil {
@@ -163,6 +198,12 @@ func printStatus(cfg agent.Config) error {
 	fmt.Printf("  Identity created : %s\n", ident.CreatedAt.Format(time.RFC3339))
 	fmt.Printf("  Data directory   : %s\n", cfg.DataDir)
 	fmt.Printf("  Control plane    : %s\n", cfg.APIBaseURL)
+	if record := a.Enrollment(); record != nil {
+		fmt.Printf("  Space            : %s\n", record.SpaceName)
+		fmt.Printf("  Device ID        : %s\n", record.DeviceID)
+	} else {
+		fmt.Printf("  Space            : not enrolled — run `netlink-agent enroll --token <token>`\n")
+	}
 	fmt.Println()
 	fmt.Println("The private key for this device never leaves this machine and is not shown here.")
 	return nil

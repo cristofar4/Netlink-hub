@@ -244,3 +244,18 @@
   border-bottom: 1.5px solid var(--nl-success);
   transform: rotate(-45deg);
 }
+
+.spaces__switcher {
+  height: 30px;
+  padding: 0 var(--nl-space-3);
+  background: var(--nl-surface-sunken);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius-sm);
+  color: var(--nl-text);
+  font-size: var(--nl-text-sm);
+  cursor: pointer;
+}
+
+.spaces__node--warning .spaces__node-dot {
+  background: var(--nl-warning);
+}

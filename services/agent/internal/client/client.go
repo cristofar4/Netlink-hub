@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,6 +22,10 @@ import (
 
 	"github.com/netlink/agent/pkg/identity"
 )
+
+// ErrRejected means the control plane refused this device outright — revoked,
+// or presenting an identity it does not recognise. Retrying will not help.
+var ErrRejected = errors.New("netlink: the control plane rejected this device")
 
 // Client is a thin HTTP client bound to one device identity.
 type Client struct {
@@ -102,9 +107,11 @@ type HeartbeatRequest struct {
 // HeartbeatResponse carries anything the control plane wants to hand back —
 // pending commands, or an instruction to re-enroll after a revocation.
 type HeartbeatResponse struct {
-	Acknowledged bool   `json:"acknowledged"`
-	Revoked      bool   `json:"revoked"`
-	Message      string `json:"message,omitempty"`
+	Acknowledged             bool              `json:"acknowledged"`
+	Revoked                  bool              `json:"revoked"`
+	Message                  string            `json:"message,omitempty"`
+	HeartbeatIntervalSeconds int               `json:"heartbeatIntervalSeconds"`
+	PendingCommands          []json.RawMessage `json:"pendingCommands"`
 }
 
 // Heartbeat sends one authenticated beat.
@@ -134,8 +141,32 @@ type EnrollRequest struct {
 
 // EnrollResponse is the control plane's assignment for this device.
 type EnrollResponse struct {
-	DeviceID string `json:"deviceId"`
-	SpaceID  string `json:"spaceId"`
+	DeviceID                 string `json:"deviceId"`
+	SpaceID                  string `json:"spaceId"`
+	SpaceName                string `json:"spaceName"`
+	HeartbeatIntervalSeconds int    `json:"heartbeatIntervalSeconds"`
+}
+
+// ResourceReport tells the control plane what this computer could offer.
+//
+// Reporting is not sharing: everything arrives disabled and stays that way
+// until the owner turns it on.
+type ResourceReport struct {
+	DeviceID  string             `json:"deviceId"`
+	Resources []ReportedResource `json:"resources"`
+}
+
+// ReportedResource is one folder or printer this machine could expose.
+type ReportedResource struct {
+	Kind     string         `json:"kind"`
+	Name     string         `json:"name"`
+	Target   string         `json:"target"`
+	Metadata map[string]any `json:"metadata,omitempty"`
+}
+
+// ReportResources sends the current inventory.
+func (c *Client) ReportResources(ctx context.Context, report ResourceReport) error {
+	return c.postSigned(ctx, "/agent/resources", report, nil)
 }
 
 // Enroll registers this installation.
@@ -216,6 +247,12 @@ func (c *Client) postSigned(ctx context.Context, path string, payload, out any) 
 		return fmt.Errorf("netlink: reading response from %s: %w", path, err)
 	}
 
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		// The control plane is telling us this identity is no longer welcome.
+		// That is different from a transient failure and the caller has to be
+		// able to tell them apart.
+		return fmt.Errorf("%w: %s", ErrRejected, truncate(string(raw), 200))
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("netlink: %s returned %s: %s", path, resp.Status, truncate(string(raw), 200))
 	}

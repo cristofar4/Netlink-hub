@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Badge, Button, Card, StatusDot, usePrefersReducedMotion } from '@netlink/ui';
-import type { AuthenticatedDevice } from '@netlink/contracts';
-import { api } from '../lib/api';
+import type { AgentSummary, LiveEvent, ResourceSummary, SpaceSummary } from '@netlink/contracts';
+import { api, ApiError } from '../lib/api';
 import { useSession } from '../state/session';
+import { useLiveEvents } from '../state/live';
 import type { SectionId } from './sections';
+import { EnrollAgentCard } from '../components/EnrollAgentCard';
 import './spaces.css';
 
 /**
@@ -13,45 +15,89 @@ import './spaces.css';
  * PC, the Data Pool, approved files, the printer, invited people, network
  * health and connection status, joined by cyan paths.
  *
- * What is real in Phase 1 is the device data — the enrolled devices come from
- * the control plane and their trust state is live. The other nodes are shown in
- * their "not set up yet" state and each says which phase makes it real, so the
- * map is honest about what exists rather than decorative.
+ * Agent status here is live — it comes from the control plane and updates over
+ * the WebSocket when a computer comes online or drops off. Nodes for features a
+ * later phase builds show their real "not set up yet" state and say which phase
+ * makes them real, so the map never implies something that does not exist.
  */
 export function SpacesScreen({ onNavigate }: { onNavigate: (section: SectionId) => void }) {
   const { user } = useSession();
-  const [devices, setDevices] = useState<AuthenticatedDevice[] | null>(null);
+  const [spaces, setSpaces] = useState<SpaceSummary[] | null>(null);
+  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
+  const [agents, setAgents] = useState<AgentSummary[]>([]);
+  const [resources, setResources] = useState<ResourceSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const reducedMotion = usePrefersReducedMotion();
 
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .listDevices()
-      .then((list) => !cancelled && setDevices(list))
-      .catch((caught: Error) => !cancelled && setError(caught.message));
-    return () => {
-      cancelled = true;
-    };
+  const activeSpace = useMemo(
+    () => spaces?.find((space) => space.id === activeSpaceId) ?? null,
+    [spaces, activeSpaceId],
+  );
+
+  const loadSpaces = useCallback(async () => {
+    try {
+      const list = await api.listSpaces();
+      setSpaces(list);
+      setActiveSpaceId((current) => current ?? list[0]?.id ?? null);
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Could not load your Spaces.');
+      setSpaces([]);
+    }
   }, []);
 
-  const activeDevices = useMemo(
-    () => (devices ?? []).filter((device) => !device.revokedAt),
-    [devices],
+  const loadSpaceDetail = useCallback(async (spaceId: string) => {
+    try {
+      const [agentList, resourceList] = await Promise.all([
+        api.listAgents(spaceId),
+        api.listResources(spaceId),
+      ]);
+      setAgents(agentList);
+      setResources(resourceList);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Could not load this Space.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSpaces();
+  }, [loadSpaces]);
+
+  useEffect(() => {
+    if (activeSpaceId) void loadSpaceDetail(activeSpaceId);
+  }, [activeSpaceId, loadSpaceDetail]);
+
+  // Live updates: refresh only the Space the event concerns, and only when it
+  // is the one on screen.
+  const liveStatus = useLiveEvents(
+    useCallback(
+      (event: LiveEvent) => {
+        if (!activeSpaceId) return;
+        if (
+          (event.type === 'agent.status' || event.type === 'resources.updated') &&
+          event.spaceId === activeSpaceId
+        ) {
+          void loadSpaceDetail(activeSpaceId);
+        }
+      },
+      [activeSpaceId, loadSpaceDetail],
+    ),
   );
-  const trustedCount = activeDevices.filter((device) => device.trusted).length;
+
+  const onlineAgents = agents.filter((agent) => agent.status === 'online');
+  const printers = resources.filter((resource) => resource.kind === 'printer');
+  const folders = resources.filter((resource) => resource.kind === 'folder');
+  const sharedPrinters = printers.filter((printer) => printer.enabled);
+  const sharedFolders = folders.filter((folder) => folder.enabled);
 
   const nodes: MapNode[] = [
     {
       id: 'devices',
       label: 'Computers',
-      detail:
-        activeDevices.length === 1
-          ? '1 device enrolled'
-          : `${activeDevices.length} devices enrolled`,
-      tone: activeDevices.length > 0 ? 'online' : 'offline',
+      detail: describeAgents(agents.length, onlineAgents.length),
+      tone: onlineAgents.length > 0 ? 'online' : agents.length > 0 ? 'warning' : 'offline',
       angle: 0,
-      live: true,
+      live: agents.length > 0,
       onOpen: () => onNavigate('devices'),
     },
     {
@@ -66,25 +112,38 @@ export function SpacesScreen({ onNavigate }: { onNavigate: (section: SectionId) 
     {
       id: 'files',
       label: 'Approved files',
-      detail: 'No folders approved',
-      tone: 'offline',
+      detail:
+        sharedFolders.length > 0
+          ? `${sharedFolders.length} folder${sharedFolders.length === 1 ? '' : 's'} shared`
+          : 'No folders approved',
+      tone: sharedFolders.length > 0 ? 'online' : 'offline',
       angle: 120,
-      phase: 5,
+      live: sharedFolders.length > 0,
+      phase: sharedFolders.length > 0 ? undefined : 5,
       onOpen: () => onNavigate('files'),
     },
     {
       id: 'printers',
       label: 'Printers',
-      detail: 'None shared',
-      tone: 'offline',
+      detail:
+        sharedPrinters.length > 0
+          ? `${sharedPrinters.length} shared`
+          : printers.length > 0
+            ? `${printers.length} found, none shared`
+            : 'None shared',
+      tone: sharedPrinters.length > 0 ? 'online' : 'offline',
       angle: 180,
-      phase: 5,
+      live: sharedPrinters.length > 0,
+      phase: sharedPrinters.length > 0 ? undefined : 5,
       onOpen: () => onNavigate('printers'),
     },
     {
       id: 'members',
       label: 'People',
-      detail: 'Only you',
+      detail:
+        activeSpace && activeSpace.memberCount > 1
+          ? `${activeSpace.memberCount} people`
+          : 'Only you',
       tone: 'offline',
       angle: 240,
       phase: 3,
@@ -93,9 +152,10 @@ export function SpacesScreen({ onNavigate }: { onNavigate: (section: SectionId) 
     {
       id: 'power',
       label: 'Power and Wake',
-      detail: 'Needs an agent',
-      tone: 'offline',
+      detail: onlineAgents.length > 0 ? `${onlineAgents.length} reachable` : 'No agent online',
+      tone: onlineAgents.length > 0 ? 'online' : 'offline',
       angle: 300,
+      live: onlineAgents.length > 0,
       phase: 4,
       onOpen: () => onNavigate('power'),
     },
@@ -106,23 +166,55 @@ export function SpacesScreen({ onNavigate }: { onNavigate: (section: SectionId) 
       <section className="spaces__hero nl-card">
         <div className="spaces__hero-head">
           <div>
-            <div className="nl-row" style={{ gap: 10 }}>
-              <h2 className="spaces__space-name">My Home</h2>
-              <Badge tone="primary">Owner</Badge>
+            <div className="nl-row" style={{ gap: 10, flexWrap: 'wrap' }}>
+              <h2 className="spaces__space-name">{activeSpace?.name ?? 'My Home'}</h2>
+              {activeSpace?.isOwner && <Badge tone="primary">Owner</Badge>}
+              {spaces && spaces.length > 1 && (
+                <select
+                  className="spaces__switcher"
+                  value={activeSpaceId ?? ''}
+                  onChange={(event) => setActiveSpaceId(event.target.value)}
+                  aria-label="Switch Space"
+                >
+                  {spaces.map((space) => (
+                    <option key={space.id} value={space.id}>
+                      {space.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <p className="nl-muted" style={{ marginTop: 4, fontSize: 'var(--nl-text-sm)' }}>
               Signed in as {user?.email}
             </p>
           </div>
           <div className="nl-spacer" />
-          <StatusDot
-            tone={activeDevices.length > 0 ? 'secure' : 'offline'}
-            label={
-              activeDevices.length > 0
-                ? `${trustedCount} trusted of ${activeDevices.length}`
-                : 'No devices yet'
-            }
-          />
+          <div className="nl-row" style={{ gap: 14, flexWrap: 'wrap' }}>
+            <StatusDot
+              tone={
+                liveStatus === 'connected'
+                  ? 'secure'
+                  : liveStatus === 'connecting'
+                    ? 'connecting'
+                    : 'warning'
+              }
+              label={
+                liveStatus === 'connected'
+                  ? 'Live'
+                  : liveStatus === 'connecting'
+                    ? 'Connecting…'
+                    : 'Reconnecting…'
+              }
+            />
+            <StatusDot
+              tone={onlineAgents.length > 0 ? 'online' : 'offline'}
+              label={
+                agents.length === 0
+                  ? 'No computers yet'
+                  : `${onlineAgents.length} of ${agents.length} online`
+              }
+            />
+          </div>
         </div>
 
         {error && (
@@ -131,67 +223,125 @@ export function SpacesScreen({ onNavigate }: { onNavigate: (section: SectionId) 
           </div>
         )}
 
-        <SpaceMap nodes={nodes} animated={!reducedMotion} loading={devices === null} />
+        <SpaceMap nodes={nodes} animated={!reducedMotion} loading={spaces === null} />
       </section>
 
       <div className="spaces__grid">
         <Card
-          title="This Space"
-          subtitle="A Space is one location — your home, your office, your shop."
+          title="Computers in this Space"
+          subtitle="A computer appears here once its NetLink agent has joined."
         >
-          <dl className="spaces__facts">
-            <div>
-              <dt>Devices enrolled</dt>
-              <dd>{devices === null ? '—' : activeDevices.length}</dd>
-            </div>
-            <div>
-              <dt>Trusted devices</dt>
-              <dd>{devices === null ? '—' : trustedCount}</dd>
-            </div>
-            <div>
-              <dt>People invited</dt>
-              <dd>0</dd>
-            </div>
-            <div>
-              <dt>Network health</dt>
-              <dd className="spaces__fact-ok">Control plane reachable</dd>
-            </div>
-          </dl>
-          <div style={{ marginTop: 20 }}>
-            <Button variant="secondary" onClick={() => onNavigate('devices')}>
-              Manage devices
-            </Button>
-          </div>
+          {agents.length === 0 ? (
+            <p className="nl-muted" style={{ fontSize: 'var(--nl-text-sm)', lineHeight: 1.6 }}>
+              No computer has joined yet. Use the card beside this one to connect the NetLink agent
+              on this machine.
+            </p>
+          ) : (
+            <ul className="nl-stack" style={{ gap: 12, listStyle: 'none', padding: 0, margin: 0 }}>
+              {agents.map((agent) => (
+                <li key={agent.id} className="nl-row" style={{ gap: 12, flexWrap: 'wrap' }}>
+                  <StatusDot
+                    tone={agent.status === 'online' ? 'online' : 'offline'}
+                    label={agent.name}
+                  />
+                  <div className="nl-spacer" />
+                  <span className="nl-dim" style={{ fontSize: 'var(--nl-text-xs)' }}>
+                    {agent.status === 'online'
+                      ? agent.localIpAddress
+                        ? `on ${agent.localIpAddress}`
+                        : 'online'
+                      : agent.lastHeartbeatAt
+                        ? `last seen ${formatRelative(agent.lastHeartbeatAt)}`
+                        : 'never seen'}
+                  </span>
+                  {agent.isWakeHelper && <Badge tone="cyan">Wake Helper</Badge>}
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
+
+        {activeSpace?.isOwner && activeSpaceId && (
+          <EnrollAgentCard
+            spaceId={activeSpaceId}
+            onEnrolled={() => void loadSpaceDetail(activeSpaceId)}
+          />
+        )}
+
+        {printers.length > 0 && activeSpace?.isOwner && activeSpaceId && (
+          <Card
+            title="Printers found on your computers"
+            subtitle="Discovering a printer is not the same as sharing it. Turn one on to make it reachable."
+          >
+            <ul className="nl-stack" style={{ gap: 12, listStyle: 'none', padding: 0, margin: 0 }}>
+              {printers.map((printer) => (
+                <li key={printer.id} className="nl-row" style={{ gap: 12, flexWrap: 'wrap' }}>
+                  <StatusDot
+                    tone={printer.metadata?.status === 'ready' ? 'online' : 'offline'}
+                    label={printer.name}
+                  />
+                  <div className="nl-spacer" />
+                  <span className="nl-dim" style={{ fontSize: 'var(--nl-text-xs)' }}>
+                    on {printer.agentName}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant={printer.enabled ? 'danger' : 'secondary'}
+                    onClick={async () => {
+                      await api.setResourceEnabled(activeSpaceId, printer.id, !printer.enabled);
+                      await loadSpaceDetail(activeSpaceId);
+                    }}
+                  >
+                    {printer.enabled ? 'Stop sharing' : 'Share'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
 
         <Card
           title="What is live today"
-          subtitle="Phase 1 is complete: accounts, verification and trusted devices."
+          subtitle="Phases 0 to 2 are complete: accounts, devices, Spaces and agents."
         >
           <ul className="spaces__checklist">
-            <li className="spaces__checklist-item spaces__checklist-item--done">
-              Accounts with Argon2id password hashing
-            </li>
-            <li className="spaces__checklist-item spaces__checklist-item--done">
-              Six-digit email verification, single use, ten minutes
-            </li>
-            <li className="spaces__checklist-item spaces__checklist-item--done">
-              New-device verification with Trust This Device
-            </li>
-            <li className="spaces__checklist-item spaces__checklist-item--done">
-              Per-device key pairs, revocable one at a time
-            </li>
-            <li className="spaces__checklist-item spaces__checklist-item--done">
-              An audit trail of every security event
-            </li>
+            {[
+              ['Accounts with Argon2id password hashing', true],
+              ['Six-digit email verification, single use, ten minutes', true],
+              ['New-device verification with Trust This Device', true],
+              ['Per-device key pairs, revocable one at a time', true],
+              ['Spaces, agent enrollment and live online state', true],
+              ['Printer discovery, shared only when you say so', true],
+            ].map(([label, done]) => (
+              <li
+                key={String(label)}
+                className={`spaces__checklist-item${done ? ' spaces__checklist-item--done' : ''}`}
+              >
+                {label}
+              </li>
+            ))}
             <li className="spaces__checklist-item">
-              Agent heartbeats and live online state <Badge tone="later">Phase 2</Badge>
+              Data Pool and NetLink Passes <Badge tone="later">Phase 3</Badge>
             </li>
           </ul>
         </Card>
       </div>
     </div>
   );
+}
+
+function describeAgents(total: number, online: number): string {
+  if (total === 0) return 'No computers yet';
+  if (online === total) return total === 1 ? '1 online' : `${total} online`;
+  return `${online} of ${total} online`;
+}
+
+function formatRelative(iso: string): string {
+  const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} h ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +392,7 @@ function SpaceMap({
         viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
         className="spaces__map-svg"
         role="img"
-        aria-label={`Map of My Home. ${positioned
+        aria-label={`Map of this Space. ${positioned
           .map((node) => `${node.label}: ${node.detail}`)
           .join('. ')}`}
       >
@@ -284,7 +434,7 @@ function SpaceMap({
           />
         )}
         <text x={CENTRE_X} y={CENTRE_Y - 4} textAnchor="middle" className="spaces__core-label">
-          My Home
+          NetLink
         </text>
         <text x={CENTRE_X} y={CENTRE_Y + 14} textAnchor="middle" className="spaces__core-sub">
           Space

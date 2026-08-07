@@ -3,6 +3,7 @@ import type { AuthenticatedDevice } from '@netlink/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { SessionService } from '../auth/session.service';
+import { LiveGateway } from '../live/live.gateway';
 import type { RequestContext } from '../common/request-context';
 import { toAuthenticatedDevice } from '../auth/auth.service';
 
@@ -12,6 +13,7 @@ export class DevicesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly sessions: SessionService,
+    private readonly live: LiveGateway,
   ) {}
 
   /** Every device on the account, newest first, with the caller's own marked. */
@@ -71,6 +73,10 @@ export class DevicesService {
     });
 
     const killedSessions = await this.sessions.revokeDeviceSessions(device.id, 'device_revoked');
+
+    // An open live socket is a channel like any other, so it goes too —
+    // otherwise revocation would be immediate for HTTP and not for push.
+    this.live.disconnectDevice(device.id);
 
     // Any pending verification for this device is dead too, so a code already
     // in someone's inbox cannot be used to bring it back.

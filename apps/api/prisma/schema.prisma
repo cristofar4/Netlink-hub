@@ -176,6 +176,8 @@ model Space {
   agents      Agent[]
   invitations Invitation[]
   auditEvents AuditEvent[]
+  resources   Resource[]
+  enrollmentTokens AgentEnrollmentToken[]
 
   @@index([ownerId])
   @@map("spaces")
@@ -230,6 +232,8 @@ model Agent {
   wakeOnLanReady Boolean    @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  resources Resource[]
 
   @@index([spaceId])
   @@map("agents")
@@ -304,4 +308,66 @@ model AuditEvent {
   @@index([spaceId, createdAt])
   @@index([action])
   @@map("audit_events")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — agent enrollment and resources
+// ---------------------------------------------------------------------------
+
+/// A short-lived token the desktop app hands to the local agent so the service
+/// can enroll itself without ever seeing the owner's password.
+model AgentEnrollmentToken {
+  id        String    @id @default(uuid())
+  spaceId   String
+  space     Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([spaceId])
+  @@map("agent_enrollment_tokens")
+}
+
+/// Replay guard for signed agent requests.
+///
+/// The agent's own nonce store is in memory; this is the server half, and it
+/// survives a restart. Rows are swept once they pass `expiresAt`.
+model RequestNonce {
+  nonce     String   @id
+  scope     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("request_nonces")
+}
+
+enum ResourceKind {
+  folder
+  printer
+}
+
+/// Something an agent offers to the Space: an approved folder, a shared
+/// printer. Nothing is exposed until the owner adds it here.
+model Resource {
+  id        String       @id @default(uuid())
+  spaceId   String
+  space     Space        @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  agentId   String
+  agent     Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  kind      ResourceKind
+  name      String
+  /// For a folder, the approved root path. For a printer, its Windows name.
+  target    String
+  enabled   Boolean      @default(true)
+  /// Free-form, agent-reported detail (printer status, drive free space).
+  metadata  Json?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([agentId, kind, target])
+  @@index([spaceId, kind])
+  @@map("resources")
 }

@@ -1,4 +1,5 @@
 import type {
+  AgentSummary,
   AuthSuccessResponse,
   AuthenticatedDevice,
   AuthenticatedUser,
@@ -6,7 +7,9 @@ import type {
   ChallengeResponse,
   DeviceIdentity,
   LoginResponse,
+  ResourceSummary,
   SessionTokens,
+  SpaceSummary,
 } from '@netlink/contracts';
 
 /**
@@ -144,6 +147,55 @@ export class NetLinkApi {
 
   revokeDevice(id: string): Promise<AuthenticatedDevice> {
     return this.request('DELETE', `/devices/${id}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Spaces, agents and resources
+  // -------------------------------------------------------------------------
+
+  listSpaces(): Promise<SpaceSummary[]> {
+    return this.request('GET', '/spaces');
+  }
+
+  createSpace(name: string): Promise<SpaceSummary> {
+    return this.request('POST', '/spaces', { body: { name } });
+  }
+
+  renameSpace(id: string, name: string): Promise<{ id: string; name: string }> {
+    return this.request('PATCH', `/spaces/${id}`, { body: { name } });
+  }
+
+  listAgents(spaceId: string): Promise<AgentSummary[]> {
+    return this.request('GET', `/spaces/${spaceId}/agents`);
+  }
+
+  listResources(spaceId: string, kind?: 'folder' | 'printer'): Promise<ResourceSummary[]> {
+    const query = kind ? `?kind=${kind}` : '';
+    return this.request('GET', `/spaces/${spaceId}/resources${query}`);
+  }
+
+  setResourceEnabled(
+    spaceId: string,
+    resourceId: string,
+    enabled: boolean,
+  ): Promise<ResourceSummary> {
+    return this.request('PATCH', `/spaces/${spaceId}/resources/${resourceId}`, {
+      body: { enabled },
+    });
+  }
+
+  createEnrollmentToken(
+    spaceId: string,
+  ): Promise<{ token: string; expiresAt: string; spaceId: string }> {
+    return this.request('POST', `/spaces/${spaceId}/enrollment-token`);
+  }
+
+  /** The URL the live-updates socket connects to, with the current token. */
+  liveUrl(): string | null {
+    const session = this.getSession();
+    if (!session) return null;
+    const base = this.baseUrl.replace(/^http/, 'ws');
+    return `${base}/live?access_token=${encodeURIComponent(session.tokens.accessToken)}`;
   }
 
   activity(limit = 50, cursor?: string): Promise<AuditPage> {

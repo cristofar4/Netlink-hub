@@ -2,6 +2,9 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { WsAdapter } from '@nestjs/platform-ws';
+import { json } from 'express';
+import type { IncomingMessage } from 'node:http';
 import type { DeviceIdentity } from '@netlink/contracts';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -43,7 +46,20 @@ export async function createTestHarness(): Promise<TestHarness> {
   // before any import — see the note there.
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication({ bodyParser: false });
+
+  // The same wiring as production, so the tests exercise the real request
+  // path: raw bodies captured for signature verification, and the native ws
+  // adapter rather than the socket.io default.
+  app.use(
+    json({
+      limit: '1mb',
+      verify: (req: IncomingMessage & { rawBody?: Buffer }, _res, buf) => {
+        req.rawBody = Buffer.from(buf);
+      },
+    }),
+  );
+  app.useWebSocketAdapter(new WsAdapter(app));
   app.setGlobalPrefix('api');
   await app.init();
 
@@ -54,7 +70,7 @@ export async function createTestHarness(): Promise<TestHarness> {
     // Truncate rather than drop: far faster between tests, and it resets the
     // identity sequences too.
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE audit_events, refresh_tokens, challenges, agents, space_members, invitations, spaces, devices, users RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE audit_events, refresh_tokens, challenges, request_nonces, agent_enrollment_tokens, resources, agents, space_members, invitations, spaces, devices, users RESTART IDENTITY CASCADE',
     );
     mail.clear();
   };
