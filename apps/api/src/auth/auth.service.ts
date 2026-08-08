@@ -16,6 +16,7 @@ import {
 import type { AppConfig } from '../config/configuration';
 import type { RequestContext } from '../common/request-context';
 import { RateLimiterService } from '../common/rate-limiter.service';
+import { AccountGuardService } from '../common/account-guard.service';
 import { TooManyRequestsException } from '../common/too-many-requests.exception';
 import { AuditService } from '../audit/audit.service';
 import { PasswordService } from '../crypto/password.service';
@@ -39,6 +40,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
     private readonly rateLimiter: RateLimiterService,
+    private readonly accountGuard: AccountGuardService,
     private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
@@ -59,7 +61,7 @@ export class AuthService {
    * not reveal which addresses are taken.
    */
   async register(input: RegisterRequest, context: RequestContext): Promise<ChallengeResponse> {
-    this.enforceLimit(
+    await this.enforceLimit(
       `register:${context.ipAddress ?? 'unknown'}`,
       this.config.get('RATE_LIMIT_REGISTER_PER_HOUR', { infer: true }),
       3600,
@@ -137,7 +139,7 @@ export class AuthService {
     input: VerifyEmailRequest,
     context: RequestContext,
   ): Promise<{ verified: true }> {
-    this.enforceLimit(
+    await this.enforceLimit(
       `otp:${context.ipAddress ?? 'unknown'}`,
       this.config.get('RATE_LIMIT_OTP_VERIFY_PER_MINUTE', { infer: true }),
       60,
@@ -189,7 +191,7 @@ export class AuthService {
    * gets a six-digit code before any session is issued.
    */
   async login(input: LoginRequest, context: RequestContext): Promise<LoginResponse> {
-    this.enforceLimit(
+    await this.enforceLimit(
       `login:${context.ipAddress ?? 'unknown'}`,
       this.config.get('RATE_LIMIT_LOGIN_PER_MINUTE', { infer: true }),
       60,
@@ -198,6 +200,29 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({ where: { email: input.email } });
 
+    /*
+    Per-account cooling off, checked before any password work.
+
+    Per-IP throttling above stops one machine trying many passwords. It cannot
+    see a thousand machines each trying one password against the same account,
+    which is what credential stuffing looks like — every request is a first
+    attempt from a new address.
+
+    The refusal deliberately looks exactly like a wrong password. Saying "this
+    account is locked" would confirm the address is real and that the guesses
+    are landing.
+    */
+    if (user && (await this.accountGuard.lockedForSeconds(user.id)) > 0) {
+      await this.audit.record({
+        action: 'auth.login.failed',
+        outcome: 'denied',
+        actorUserId: user.id,
+        context,
+        metadata: { reason: 'account_cooling_off' },
+      });
+      throw new UnauthorizedException(GENERIC_LOGIN_FAILURE);
+    }
+
     // Always spend the cost of a hash comparison, even for an unknown address,
     // so response timing does not reveal whether the account exists.
     const passwordMatches = user
@@ -205,6 +230,9 @@ export class AuthService {
       : await this.passwords.verify(DUMMY_ARGON2_HASH, input.password);
 
     if (!user || !passwordMatches || user.disabledAt) {
+      if (user && !passwordMatches) {
+        await this.accountGuard.recordFailure(user.id);
+      }
       await this.audit.record({
         action: 'auth.login.failed',
         outcome: 'failure',
@@ -230,6 +258,11 @@ export class AuthService {
       });
       return { status: 'challenge_required', challenge: issued.response };
     }
+
+    // A correct password is proof this account is not under successful attack,
+    // so the failure count goes rather than leaving the owner one mistake from
+    // a lockout tomorrow.
+    await this.accountGuard.recordSuccess(user.id);
 
     // Upgrade a hash that predates the current Argon2id parameters, now that we
     // hold a verified plaintext password.
@@ -274,7 +307,7 @@ export class AuthService {
         context,
         metadata: { trustedDevice: true },
       });
-      this.rateLimiter.reset(`login:${context.ipAddress ?? 'unknown'}`);
+      await this.rateLimiter.reset(`login:${context.ipAddress ?? 'unknown'}`);
 
       return {
         status: 'authenticated',
@@ -317,7 +350,7 @@ export class AuthService {
     input: VerifyDeviceRequest,
     context: RequestContext,
   ): Promise<AuthSuccessResponse> {
-    this.enforceLimit(
+    await this.enforceLimit(
       `otp:${context.ipAddress ?? 'unknown'}`,
       this.config.get('RATE_LIMIT_OTP_VERIFY_PER_MINUTE', { infer: true }),
       60,
@@ -404,7 +437,7 @@ export class AuthService {
   }
 
   async resendCode(challengeId: string, context: RequestContext): Promise<ChallengeResponse> {
-    this.enforceLimit(
+    await this.enforceLimit(
       `resend:${context.ipAddress ?? 'unknown'}`,
       this.config.get('RATE_LIMIT_OTP_VERIFY_PER_MINUTE', { infer: true }),
       60,
@@ -550,8 +583,13 @@ export class AuthService {
     return device;
   }
 
-  private enforceLimit(key: string, limit: number, windowSeconds: number, message: string): void {
-    const result = this.rateLimiter.consume(key, limit, windowSeconds);
+  private async enforceLimit(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+    message: string,
+  ): Promise<void> {
+    const result = await this.rateLimiter.consume(key, limit, windowSeconds);
     if (!result.allowed) {
       throw new TooManyRequestsException(message, result.retryAfterSeconds);
     }

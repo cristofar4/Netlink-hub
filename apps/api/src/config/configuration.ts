@@ -74,6 +74,17 @@ const configSchema = z
 
     CORS_ORIGINS: z.string().default('http://localhost:5173,http://wails.localhost'),
 
+    /**
+     * Where rate-limit counters live.
+     *
+     * `memory` is correct for exactly one instance. With two, counters that do
+     * not agree mean the effective limit is `limit × replicas`, which is not a
+     * limit — so production must say which it wants rather than inheriting a
+     * default that is silently wrong at scale.
+     */
+    RATE_LIMIT_STORE: z.enum(['memory', 'postgres']).default('memory'),
+    /** Ceiling on requests from one address, across every endpoint. */
+    RATE_LIMIT_GLOBAL_PER_MINUTE: z.coerce.number().int().positive().default(600),
     RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().int().positive().default(10),
     RATE_LIMIT_REGISTER_PER_HOUR: z.coerce.number().int().positive().default(5),
     RATE_LIMIT_OTP_VERIFY_PER_MINUTE: z.coerce.number().int().positive().default(10),
@@ -82,6 +93,21 @@ const configSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((v) => v === 'true'),
+
+    /**
+     * Serves `/api/metrics` in Prometheus format.
+     *
+     * Off unless asked for, and bound behind whatever the deployment uses to
+     * reach it — the endpoint carries no personal data by design, but it is
+     * still an unauthenticated description of how the system is behaving.
+     */
+    ENABLE_METRICS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+
+    /** Version reported on the health endpoint and in the update manifest. */
+    APP_VERSION: z.string().default('0.1.0-dev'),
   })
   .superRefine((cfg, ctx) => {
     if (cfg.TURN_URLS.trim() && !cfg.TURN_SECRET) {
@@ -113,6 +139,14 @@ const configSchema = z
           path: ['POWER_SIGNING_KEY'],
           message:
             'POWER_SIGNING_KEY is required in production — an ephemeral key would invalidate every power command on restart',
+        });
+      }
+      if (cfg.RATE_LIMIT_STORE !== 'postgres') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['RATE_LIMIT_STORE'],
+          message:
+            'RATE_LIMIT_STORE must be postgres in production — in-memory counters do not hold across instances, so the effective limit becomes limit × replicas',
         });
       }
       if (cfg.MAIL_TRANSPORT !== 'smtp') {

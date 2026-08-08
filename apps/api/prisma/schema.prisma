@@ -38,6 +38,7 @@ model User {
   memberships    SpaceMember[]
   createdInvites Invitation[]    @relation("InvitationCreatedBy")
   remoteSessions RemoteSession[] @relation("RemoteViewer")
+  guard          AccountGuard?
 
   @@index([email])
   @@map("users")
@@ -709,4 +710,49 @@ model RemoteSignal {
   @@unique([sessionId, seq])
   @@index([sessionId, seq])
   @@map("remote_signals")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7 — production hardening
+// ---------------------------------------------------------------------------
+
+/// One rate-limit counter, shared across every API instance.
+///
+/// Here rather than in Redis on purpose: the database is already a hard
+/// dependency, already secured and already backed up, and a single
+/// `INSERT … ON CONFLICT DO UPDATE` gives the only property that matters —
+/// an increment no two instances can interleave.
+model RateLimitBucket {
+  key       String   @id
+  count     Int
+  /// When the window ends. Rows past it are reset in place, and swept in bulk.
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+  @@map("rate_limit_buckets")
+}
+
+/// A record of repeated authentication failures against one account.
+///
+/// Separate from the per-IP limiter because the two stop different attacks.
+/// Per-IP throttling stops one machine trying many passwords; this stops many
+/// machines trying passwords against one account, which is what credential
+/// stuffing actually looks like and what per-IP limits cannot see.
+///
+/// Deliberately not a permanent lockout: that would hand anyone who knows an
+/// email address the ability to lock its owner out. The delay grows and then
+/// decays on its own.
+model AccountGuard {
+  userId       String    @id
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  failures     Int       @default(0)
+  firstFailure DateTime  @default(now())
+  lastFailure  DateTime  @default(now())
+  /// Set while the account is cooling off. Null means it is not.
+  lockedUntil  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([lockedUntil])
+  @@map("account_guards")
 }

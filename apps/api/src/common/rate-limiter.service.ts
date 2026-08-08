@@ -1,67 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { RateLimitStore, type RateLimitResult } from './rate-limit.store';
 
-type Bucket = {
-  count: number;
-  resetAt: number;
-};
-
-export type RateLimitResult = {
-  allowed: boolean;
-  remaining: number;
-  retryAfterSeconds: number;
-};
+export type { RateLimitResult } from './rate-limit.store';
 
 /**
- * Fixed-window rate limiter held in process memory.
+ * The rate limiter every caller uses.
  *
- * This is deliberately simple and deliberately per-instance. It is enough to
- * blunt credential stuffing and OTP brute force against a single-instance
- * deployment, which is what the MVP ships. Phase 7 replaces the storage with a
- * shared store (Redis) so limits hold across replicas — the interface here is
- * what that swap has to satisfy, and nothing outside this class knows where the
- * counters live.
+ * It knows nothing about where the counters live — that is the store's job, and
+ * which store is in use is a deployment decision rather than a code one. What
+ * lives here is the one behaviour every caller relies on: a hit is recorded,
+ * and the answer says how long to wait.
  */
 @Injectable()
 export class RateLimiterService {
-  private readonly buckets = new Map<string, Bucket>();
-  private lastSweep = 0;
+  constructor(private readonly store: RateLimitStore) {}
+
+  consume(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+    now?: number,
+  ): Promise<RateLimitResult> {
+    return this.store.consume(key, limit, windowSeconds, now);
+  }
 
   /**
-   * Records one hit against `key` and reports whether it is within `limit` for
-   * the current `windowSeconds` window.
+   * Clears a bucket after a legitimate success, so one person's typo streak
+   * does not lock them out once they get it right.
    */
-  consume(key: string, limit: number, windowSeconds: number, now = Date.now()): RateLimitResult {
-    this.sweep(now);
-
-    const bucket = this.buckets.get(key);
-    if (!bucket || bucket.resetAt <= now) {
-      const resetAt = now + windowSeconds * 1000;
-      this.buckets.set(key, { count: 1, resetAt });
-      return { allowed: true, remaining: limit - 1, retryAfterSeconds: 0 };
-    }
-
-    bucket.count += 1;
-    if (bucket.count > limit) {
-      return {
-        allowed: false,
-        remaining: 0,
-        retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
-      };
-    }
-    return { allowed: true, remaining: limit - bucket.count, retryAfterSeconds: 0 };
+  reset(key: string): Promise<void> {
+    return this.store.reset(key);
   }
 
-  /** Clears a bucket after a legitimate success, so one user's typo streak does not lock them out. */
-  reset(key: string): void {
-    this.buckets.delete(key);
-  }
-
-  /** Drops expired buckets at most once a minute so the map cannot grow without bound. */
-  private sweep(now: number): void {
-    if (now - this.lastSweep < 60_000) return;
-    this.lastSweep = now;
-    for (const [key, bucket] of this.buckets) {
-      if (bucket.resetAt <= now) this.buckets.delete(key);
-    }
+  /** Surfaced on the readiness endpoint so a non-shared store is visible. */
+  describe(): { kind: string; shared: boolean } {
+    return this.store.describe();
   }
 }

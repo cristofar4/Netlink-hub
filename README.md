@@ -8,13 +8,14 @@ NetLink is an **app-only** product. There is no NetLink router and no proprietar
 
 ## Status
 
-**Phase 0 and Phase 1 are complete and tested.** Everything else is scaffolded, navigable and clearly marked with the phase that will build it. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for exactly what is real today and what is not.
+**All seven phases are complete and tested.** See [PROJECT_STATUS.md](PROJECT_STATUS.md) for exactly what is real today and what is not — including the one thing that is deliberately simulated.
 
 | | |
 |---|---|
-| Working now | Accounts, email verification, sign-in, new-device verification, trusted devices, device revocation, rotating sessions, audit trail, the Spaces dashboard |
-| Scaffolded, not built | Data Pool, Network Access, Files, Printers, Automations, Power and Wake, Member Access, remote desktop |
-| Deliberately absent | Any means of bypassing carrier billing, arbitrary remote command execution, whole-drive access |
+| Working now | Accounts and trusted devices; Spaces with live agent status; Device Power and Wake; approved folders, transfers and PDF printing; remote desktop with real WebRTC; NetLink Passes and Member Access; the audit trail |
+| Real but simulated | The **Data Pool**. The allocation logic, limits, expiry, pausing and isolation are all real and tested — the *network data* comes from a Demo Provider, and every screen showing its numbers says so. A real adapter needs a carrier agreement, not more code |
+| Not built | Passkeys and authenticator apps (email is the second factor); remote-desktop audio and clipboard; an HSM for the signing key. Each is named in [SECURITY.md §12](SECURITY.md) rather than quietly omitted |
+| Deliberately absent, permanently | Any means of bypassing carrier billing, arbitrary remote command execution, whole-drive access, cloud storage of file contents |
 
 ---
 
@@ -78,7 +79,7 @@ apps/
 services/
   agent/              Go Windows service: device identity, heartbeats, WoL, signed commands
     pkg/              Packages shared with the desktop app (identity, command, wol)
-  relay/              End-to-end encrypted relay — Phase 6
+  relay/              Optional self-hosted relay (coturn config and notes)
 packages/
   contracts/          Permissions, DTO schemas and transport types shared by API and UI
   ui/                 Design tokens and the reusable component system
@@ -106,8 +107,8 @@ Two structural decisions worth knowing about, both documented in [ARCHITECTURE.m
   └────────┬─────────┘          └─────────────────────┘        └────────┬─────────┘
            │                                                            │
            └────────────────────────────────────────────────────────────┘
-                  Direct encrypted path for files, screen and print
-                  (Phases 5 and 6 — never through the control plane)
+                  Direct encrypted path for files, screen and input
+                       — never through the control plane
 ```
 
 The control plane holds identity, trust, permissions and the audit trail. It deliberately never carries file contents, screen frames or print payloads — those go directly between your own devices.
@@ -126,6 +127,9 @@ Full detail in [SECURITY.md](SECURITY.md) and [THREAT_MODEL.md](THREAT_MODEL.md)
 - Revoking one device ends that device's sessions **immediately** — including its still-valid access token — and leaves every other device working.
 - The audit trail records what happened, never what was in it: no file contents, no messages, no passwords, no browsing history.
 - Power commands are signed, addressed to one device, time-bounded and single-use. There is **no arbitrary remote execution verb**, by design.
+- Only folders you approve are reachable. The agent's path check carries thirty tests, most of them escape attempts — traversal, UNC paths, alternate data streams, symlinks, and names that merely *look* like an approved folder.
+- **View-only remote desktop genuinely cannot type.** Input goes peer to peer, so the server could not police it — the mode is sealed in a signed grant and enforced by the computer being watched, which is the only party that can refuse to move the mouse.
+- Updates are refused unless a key you hold signed a manifest naming the binary's exact hash — and refused again if the version goes backwards, which is what stops a genuine older release being replayed against you.
 
 ### On shared internet data
 

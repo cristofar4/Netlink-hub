@@ -7,7 +7,6 @@ import { SessionService } from './session.service';
 import { AccessTokenGuard } from './access-token.guard';
 import { PasswordService } from '../crypto/password.service';
 import { TokenService } from '../crypto/token.service';
-import { RateLimiterService } from '../common/rate-limiter.service';
 
 @Module({
   imports: [JwtModule.register({})],
@@ -18,7 +17,6 @@ import { RateLimiterService } from '../common/rate-limiter.service';
     SessionService,
     PasswordService,
     TokenService,
-    RateLimiterService,
     AccessTokenGuard,
   ],
   exports: [

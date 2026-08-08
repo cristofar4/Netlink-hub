@@ -23,3 +23,10 @@ process.env.RATE_LIMIT_LOGIN_PER_MINUTE = process.env.RATE_LIMIT_LOGIN_PER_MINUT
 process.env.RATE_LIMIT_REGISTER_PER_HOUR = process.env.RATE_LIMIT_REGISTER_PER_HOUR ?? '1000';
 process.env.RATE_LIMIT_OTP_VERIFY_PER_MINUTE =
   process.env.RATE_LIMIT_OTP_VERIFY_PER_MINUTE ?? '1000';
+process.env.RATE_LIMIT_GLOBAL_PER_MINUTE = process.env.RATE_LIMIT_GLOBAL_PER_MINUTE ?? '100000';
+
+// The hardening tests exercise both stores; everything else runs on the shared
+// one, because that is what production uses and a test suite that only proves
+// the in-memory path proves the wrong thing.
+process.env.RATE_LIMIT_STORE = process.env.RATE_LIMIT_STORE ?? 'postgres';
+process.env.ENABLE_METRICS = process.env.ENABLE_METRICS ?? 'true';

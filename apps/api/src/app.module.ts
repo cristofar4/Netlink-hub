@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { validateConfig } from './config/configuration';
@@ -16,6 +16,9 @@ import { RemoteModule } from './remote/remote.module';
 import { LiveModule } from './live/live.module';
 import { HealthModule } from './health/health.module';
 import { AccessTokenGuard } from './auth/access-token.guard';
+import { CommonModule } from './common/common.module';
+import { GlobalRateLimitGuard } from './common/global-rate-limit.guard';
+import { ObservabilityMiddleware } from './common/observability.middleware';
 
 @Module({
   imports: [
@@ -25,6 +28,7 @@ import { AccessTokenGuard } from './auth/access-token.guard';
       cache: true,
     }),
     PrismaModule,
+    CommonModule,
     MailModule,
     AuditModule,
     AuthModule,
@@ -40,6 +44,13 @@ import { AccessTokenGuard } from './auth/access-token.guard';
   ],
   providers: [
     {
+      // A ceiling on requests from one address, ahead of everything else.
+      // Endpoint-specific limits are tighter and live where they belong; this
+      // is the one that stops a flood before it reaches any of them.
+      provide: APP_GUARD,
+      useClass: GlobalRateLimitGuard,
+    },
+    {
       // Authentication is on by default for every route in the application.
       // Public endpoints opt out with @Public(), so forgetting a guard leaves
       // an endpoint locked rather than open.
@@ -48,4 +59,13 @@ import { AccessTokenGuard } from './auth/access-token.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  /**
+   * Observability wraps every route, including the ones a guard refuses and the
+   * ones that match nothing. An interceptor would see neither — guards run
+   * first, and an unmatched path never reaches the interceptor pipeline.
+   */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(ObservabilityMiddleware).forRoutes('*');
+  }
+}

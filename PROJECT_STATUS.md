@@ -1,7 +1,7 @@
 # NetLink Project Status
 
-**Last updated:** end of Phase 6
-**Current state:** Phases 0 through 6 complete. All checks and builds passing.
+**Last updated:** end of Phase 7
+**Current state:** all seven phases complete. All checks and builds passing.
 
 This document is the honest record of what NetLink actually does today. Anything not listed as complete is not built, however finished the navigation may look.
 
@@ -19,15 +19,16 @@ Every number below was produced by running the checks, not estimated.
 | `go vet` (agent, desktop) | Clean |
 | TypeScript — contracts, ui, api, frontend | Clean |
 | Contract tests | **48 passed** |
-| API tests (unit + integration, real PostgreSQL) | **264 passed**, 10 suites |
-| Go tests (agent) | **176 passed**, 8 packages |
+| API tests (unit + integration, real PostgreSQL) | **286 passed**, 11 suites |
+| Go tests (agent) | **208 passed**, 9 packages |
 | Frontend tests | **25 passed** |
-| **Total automated tests** | **513 passed, 0 failing** |
+| **Total automated tests** | **567 passed, 0 failing** |
 | Production builds — contracts, API, frontend, agent | All succeed |
 | Windows cross-compile — agent, desktop | Both succeed (DPAPI path compiles) |
 | End-to-end UI walkthrough (Playwright, real API) | Full flow passes, no console errors |
 | Real Go agent against the real API | Enrols, heartbeats, registers resources, collects and executes signed commands |
 | Real WebRTC session, end to end | A real peer connection through the real control plane: frames delivered, view-only input refused and audited |
+| Release signing, end to end | A real key generated, a real manifest signed, accepted for an older agent and refused as a downgrade for a newer one |
 
 Run it yourself: `.\scripts\test-all.ps1`
 
@@ -251,6 +252,52 @@ are the only remote-desktop bytes the control plane ever holds.
 
 ---
 
+## Phase 7 — Production hardening ✅
+
+### Rate limiting that actually holds
+
+Counters live in PostgreSQL and are shared across every instance, incremented by one `INSERT … ON CONFLICT DO UPDATE` so two instances cannot interleave.
+
+Postgres rather than Redis, deliberately: the database is already a hard dependency, already secured, already backed up, and the only property that matters here is an atomic increment. Redis becomes the right answer when auth traffic is high enough that a write per attempt is a meaningful share of database load — a long way past where this product is, and a one-class swap when it arrives.
+
+**Production refuses to start on the in-memory store**, because with two replicas the effective limit becomes `limit × replicas`, which is not a limit. The readiness endpoint reports which store is in use, so a misconfiguration shows up on a dashboard rather than in an incident.
+
+### Protecting an account, not just an address
+
+A per-IP limit cannot see the attack that matters. A thousand machines each trying one password against one account is a thousand first attempts from new addresses.
+
+So an account cools off after five failures — 30 seconds, doubling to a fifteen-minute ceiling, decaying after an hour of quiet. Three properties, each deliberate:
+
+- **The refusal is byte-identical to a wrong password.** "This account is locked" confirms the address is real and that the guesses are landing.
+- **It is temporary.** A permanent lockout would hand anyone who knows an email address the ability to lock its owner out. Denial of service by helpful security control is still denial of service.
+- **It decays.** Somebody who mistypes twice today and twice next week is not an attack, and treating them as one is how a control becomes something people work around.
+
+### Monitoring that does not leak
+
+Prometheus metrics and one structured log line per request. What is *not* in them is the point: no user ids, no emails, no addresses, no Space ids, no bodies, no query strings, no headers. Routes appear as **templates** — `/spaces/:spaceId/files`, never the Space id — and a test asserts it. Unmatched paths are bucketed, so nobody can create unlimited metric series by requesting random URLs.
+
+Implemented as **middleware, not an interceptor**. Nest runs guards before interceptors, so an interceptor never sees a request that authentication refused — which is precisely the request worth counting — and never sees a 404 at all. This was caught by a failing test, not by review.
+
+### Backups that have been restored
+
+`backup-windows.ps1` dumps, writes a checksum beside it, and then **verifies by restoring into a throwaway database and counting tables**. An unverified backup is a belief, and the moment you find out otherwise is the worst possible moment. Retention will never delete the last remaining copy, whatever the clock says.
+
+`restore-windows.ps1` checks the file against its checksum, refuses to run while the API is still answering, and makes you type the database name.
+
+### Releases nothing can substitute
+
+Two signatures doing two jobs. **Authenticode** over the binaries, for SmartScreen and the UAC publisher name. A separate **Ed25519 signature over a manifest** naming each artifact's exact SHA-256, size and URL — that is the one agents actually check.
+
+Authenticode alone is not enough: an attacker who serves a *genuine, signed, older* release performs a downgrade attack without forging anything. So versions cannot go backwards, manifests expire, plain HTTP is refused, and downloads are length-bounded before they are read.
+
+`build-release.ps1` **refuses to claim something was signed when it was not**. An unsigned build labelled unsigned is fine; one quietly labelled signed is how a bad build reaches users.
+
+### A threat model with a reviewer's pack
+
+THREAT_MODEL.md now covers T1–T17 and closes with §7: where to start reading, the seven claims worth attacking with the file that enforces each and the test that proves it, how to run the thing, and — most usefully — what we already know is weak, so nobody spends a week confirming it.
+
+---
+
 ## What is real and what is simulated
 
 Stated plainly, because this is the question that matters most.
@@ -273,7 +320,6 @@ Stated plainly, because this is the question that matters most.
 ### Not real yet, and shown as such
 
 - **The Data Pool is a Demo Provider.** The allocation logic, limits, expiry, pausing and isolation are all real and tested; the *network data* is simulated. No carrier is connected. Every screen showing its numbers says "Demo Provider" on it. **A real adapter needs a commercial agreement — see the questions below.**
-- **Production hardening.** Rate limiting is per-process, installers are unsigned, there is no automatic update channel. **Phase 7.**
 
 ### Deliberately absent, permanently
 
@@ -285,11 +331,15 @@ Stated plainly, because this is the question that matters most.
 
 ---
 
-## Remaining phases
+## What is left
 
-| Phase | Scope | State |
+Nothing that is a phase. Three things that are decisions rather than code:
+
+| | Why it is not built | Who decides |
 |---|---|---|
-| 7 | Signed installers, auto-update, distributed rate limiting, monitoring, backups, external review | Not started |
+| A real telecom adapter | Needs a commercial agreement, not more code. The interface, the isolation and the limits are all built and tested against the Demo Provider | You, with a carrier |
+| A code-signing certificate | The build script signs when given a thumbprint. Buying and holding an EV or OV certificate is a purchase and a custody decision | You |
+| Passkeys or an authenticator app | Adding a second factor properly means account recovery, device binding and a migration for everyone who already has an account. That is a piece of work, not a checkbox, and email works today | Product call |
 
 ---
 
@@ -297,11 +347,12 @@ Stated plainly, because this is the question that matters most.
 
 | | Why | Planned |
 |---|---|---|
-| Rate limiting is per-process in memory | Correct for the single-instance MVP; the interface is what a shared store must satisfy | Phase 7 |
-| The desktop app holds its refresh token in memory only | Persisting it plainly would leave a long-lived credential readable by any process running as that user. Signing in again after a restart is the honest trade | Phase 7, sealed via DPAPI |
-| No passkeys, authenticator apps or biometrics | Interfaces prepared, not built | Phase 7 |
-| Installers are not signed | | Phase 7 |
-| No external security review | | Phase 7 |
+| The desktop app holds its refresh token in memory only | Persisting it plainly would leave a long-lived credential readable by any process running as that user. Signing in again after a restart is the honest trade | Accepted; would be sealed via DPAPI |
+| No passkeys, authenticator apps or biometrics | Email is the second factor. See "What is left" above | Product call |
+| The control plane's signing key lives in process memory | An HSM is the right answer and is deployment work rather than code | Before production |
+| Installers are unsigned unless you supply a certificate | The build script signs when given one and says loudly when it cannot | Needs a certificate |
+| Remote desktop has no audio or clipboard | Real features, neither a security control. Left out rather than half-built | Later |
+| No external security review | The pack for one is THREAT_MODEL.md §7 | Not yet commissioned |
 | Only the Demo Provider exists | A real one needs a carrier agreement, not more code | Blocked on a commercial decision |
 | No TURN server is configured by default | STUN is harmless to point at a public server; a relay carries real traffic and should be yours. Without one, remote desktop works only where a direct path exists | Deployment |
 | Remote frames are JPEG, not a video track | A pure-Go video encoder would be slower; a cgo one would end the agent's single-binary property | Later, as an efficiency change |
@@ -328,6 +379,10 @@ Recorded here so they can be overridden deliberately rather than discovered by s
 13. **`devices.observe` is a sixteenth permission**, added deliberately. Folding screen-watching into `devices.control` would make view-only a label rather than a boundary — see Phase 6 above.
 14. **Remote session grants reuse the control plane's existing signing key**, separated from power commands by a domain string at the head of the signing input. A second key would be a second thing to rotate and a second thing to get wrong; a test proves a power command cannot be replayed as a session grant.
 15. **Signalling appends are serialised with a row lock on the session.** ICE emits candidates in parallel, so assigning sequence numbers by reading the highest and then inserting loses the race — and retrying does not help when a dozen writers collide. This was found by running a real connection, not by a test.
+16. **Rate-limit counters live in PostgreSQL, not Redis.** The database is already a hard dependency, already secured and already backed up; the property that matters is an atomic increment, and one SQL statement provides it. Redis is right when auth traffic makes a write per attempt significant.
+17. **Metrics are hand-rolled rather than `prom-client`.** The whole surface needed is a counter, a gauge and a histogram, and a metrics endpoint is scraped from outside the trust boundary. A hundred readable lines beat a dependency whose defaults have to be configured *away* from exporting the process environment.
+18. **Request observability is middleware, not an interceptor.** Guards run first, so an interceptor cannot see the requests authentication refused — the ones most worth counting.
+19. **Account lockouts are temporary and decay.** A permanent one is a denial-of-service primitive handed to anyone who knows an email address.
 
 ---
 
@@ -338,7 +393,8 @@ Only the ones that genuinely cannot be decided from the code.
 1. **Telecom provider.** Which operator or MVNO is the target for the first real Data Pool adapter, and is there a commercial agreement in place? The Demo Provider covers development, but a real adapter needs credentials and an API contract. **This is the one item that cannot be finished in code.**
 2. **SMTP provider for production.** Codes must be delivered reliably by a real service. Which one, and who holds the credentials?
 3. **TURN infrastructure.** Remote desktop needs a TURN server for the sessions that cannot connect directly — which is most of them behind mobile or carrier-grade NAT. Self-hosted coturn or a managed provider is a cost and operations decision; the code is ready for either.
-4. **Code-signing certificate.** Windows installers need an EV or OV certificate for Phase 7. Purchasing and custody are yours to decide.
-5. **Hosting.** Where the control plane runs determines the TLS proxy, backup strategy and how coarse location is derived.
+4. **Code-signing certificate.** Windows installers need an EV or OV certificate. `build-release.ps1` uses one when given a thumbprint and refuses to pretend when not. Purchasing and custody are yours.
+5. **Custody of the release signing key.** It decides what code runs on every installation. Nothing in software can protect a key from whoever holds it — offline storage is an operational commitment you have to make.
+6. **Hosting.** Where the control plane runs determines the TLS proxy, backup strategy and how coarse location is derived.
 
-None of these block Phase 7, which is where I would go next.
+None of these block anything that can be built. They are the things only you can answer.

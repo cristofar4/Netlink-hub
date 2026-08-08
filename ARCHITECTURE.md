@@ -34,7 +34,7 @@ apps/desktop                Wails window (Go)
 apps/desktop/frontend       React + TypeScript + Vite
 services/agent              Go Windows service
 services/agent/pkg          Shared with the desktop app: identity, command, wol
-services/relay              Encrypted relay — Phase 6, interfaces only
+services/relay              Optional self-hosted TURN relay — configuration and notes
 packages/contracts          Permissions, DTO schemas, transport types
 packages/ui                 Design tokens and components
 infrastructure              Container and database bootstrap
@@ -145,7 +145,7 @@ Sensitive capabilities (`devices.control`, `files.delete`, `power.restart`, `pow
 
 ---
 
-## 6. Power commands (Phase 4 — designed and tested, not yet wired)
+## 6. Power commands
 
 The command envelope and its verifier are built and under test now, because getting this wrong is the most dangerous failure NetLink could have.
 
@@ -189,19 +189,20 @@ The palette is dark-first because NetLink is a control surface people glance at:
 
 ### Honesty in the interface
 
-Every section not yet built renders a placeholder that names the phase and lists what it will do. Controls that are planned carry a "Coming later" badge. Nothing in NetLink is a button that silently does nothing.
+Every visible control works. The two sections that remain placeholders — Automations, and the optional private-network layer — say what they are for and carry a "Coming later" badge. Nothing in NetLink is a button that silently does nothing.
 
 ---
 
-## 8. Future connection layer (Phase 6)
+## 8. The connection layer
 
-Interfaces exist now in `packages/contracts/src/connection.ts` so the three programs agree on signalling before any of it is built:
+Files, screen frames and input all travel the same way: **the control plane authorises, records, and gets out of the way.**
 
-- **WebRTC** for screen, optional audio, input and clipboard.
-- **ICE / STUN / TURN** for path discovery, with short-lived TURN credentials — never a long-lived shared secret.
-- **Direct** connections preferred; media then never touches our servers.
-- **Relay fallback** that stays end-to-end encrypted through the relay, so the relay is a dumb pipe.
-- **WireGuard** as an explicitly separate, later decision. NetLink does not expose a router admin page or a whole private network in the first release.
+- **WebRTC** for screen and input. Two data channels, and the asymmetry between them is deliberate: frames are unreliable and unordered, because a late frame paints a stale picture over a newer one; input is reliable and ordered, because a dropped key-up leaves a modifier stuck down on somebody else's machine.
+- **ICE / STUN / TURN** for path discovery. TURN credentials are minted per session from a shared secret and an expiry — never a long-lived password handed to a client.
+- **Direct** connections preferred; media then never touches our servers at all.
+- **Relay fallback** that stays end-to-end encrypted through the relay, so the relay is a dumb pipe. The viewer is told which path it got, because a relay is slower and the person deserves to know rather than just experience it as lag.
+- **The mode is enforced on the host, not the server.** Input never reaches the control plane, so it could not police it even in principle. A signed grant carries the mode, and the agent refuses input it was not granted. This is the one place where the architecture's privacy property forced a security design rather than merely permitting one.
+- **WireGuard** remains an explicitly separate, later decision, and the interface for it is still just an interface. Handing someone a route onto the whole home network is a categorically larger grant than access to one computer, and bolting it on because the plumbing is nearby is how that decision gets made by accident.
 
 ---
 
@@ -209,10 +210,10 @@ Interfaces exist now in `packages/contracts/src/connection.ts` so the three prog
 
 | Layer | Tool | Covers |
 |---|---|---|
-| Contracts | Vitest | Default-deny, data-only isolation, pass expiry, email masking, schema validation |
-| API unit | Jest | Argon2id parameters and verification, OTP generation and hashing |
-| API integration | Jest + supertest + **real PostgreSQL** | The full auth flow, device revocation, audit, guards |
-| Agent | `go test` | Identity, key store, WoL packets, signed commands, replay, request signing |
+| Contracts | Vitest | Default-deny, data-only isolation, pass expiry, email masking, remote session modes, schema validation |
+| API unit | Jest | Argon2id parameters and verification, OTP generation and hashing, agent signature verification |
+| API integration | Jest + supertest + **real PostgreSQL** | The full auth flow, device revocation, audit, guards, data isolation, power, files, remote sessions, rate limiting |
+| Agent | `go test` | Identity, key store, WoL packets, signed commands, replay, request signing, the file vault, the view-only gate, update manifests, and **two real WebRTC peers connecting over loopback** |
 | Frontend | Vitest + Testing Library | API client behaviour, refresh coalescing, OTP input |
 
 Integration tests run against a real database and a real Nest application — no mocked repositories. The point of these tests is to prove the guards and the SQL behave, and a mock proves neither.
