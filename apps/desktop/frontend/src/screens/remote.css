@@ -1,0 +1,101 @@
+/*
+Remote desktop.
+
+The visual job here is narrow and important: a person must never be unsure
+whether they are watching a screen or driving it. View-only sessions get a cyan
+frame and a standing watermark; control sessions get a warm border that is
+visibly different at a glance, from across a room, without reading anything.
+*/
+
+.remote__stage {
+  position: relative;
+  margin: var(--nl-space-4) 0;
+  border-radius: var(--nl-radius-lg);
+  overflow: hidden;
+  background: #05070f;
+  border: 2px solid var(--nl-warning, #e8a33d);
+  box-shadow: var(--nl-shadow-card);
+  /* A 16:9 box before the first frame lands, so the card does not jump when it
+     does. */
+  aspect-ratio: 16 / 9;
+}
+
+.remote__stage--view {
+  border-color: var(--nl-accent-cyan);
+}
+
+.remote__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* A control session gets a crosshair: the pointer people see is the one on
+     the far machine, and a second arrow chasing it is confusing. */
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.remote__stage--view .remote__canvas {
+  cursor: default;
+}
+
+.remote__watermark {
+  position: absolute;
+  top: var(--nl-space-3);
+  right: var(--nl-space-3);
+  padding: 4px 10px;
+  border-radius: var(--nl-radius-pill, 999px);
+  background: rgba(5, 7, 15, 0.72);
+  border: 1px solid var(--nl-accent-cyan);
+  color: var(--nl-accent-cyan);
+  font-size: var(--nl-text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  /* A slow pulse, so the badge reads as live state rather than a static label.
+     Two seconds is deliberately below the threshold where motion draws the eye
+     away from the screen being watched. */
+  animation: remote-watermark 2.4s ease-in-out infinite;
+}
+
+@keyframes remote-watermark {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.remote__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nl-space-4);
+  align-items: baseline;
+  font-size: var(--nl-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--nl-text-secondary);
+  padding-bottom: var(--nl-space-3);
+}
+
+.remote__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nl-space-3);
+  align-items: center;
+}
+
+/*
+Reduced motion.
+
+Someone who has asked for less movement is not asking to be told less. The
+watermark stops pulsing and simply stays at full opacity — the information
+survives, the animation does not.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .remote__watermark {
+    animation: none;
+    opacity: 1;
+  }
+}

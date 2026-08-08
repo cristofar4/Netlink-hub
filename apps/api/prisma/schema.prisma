@@ -30,13 +30,14 @@ model User {
   updatedAt     DateTime  @updatedAt
   disabledAt    DateTime?
 
-  devices           Device[]
-  challenges        Challenge[]
-  refreshTokens     RefreshToken[]
-  auditEvents       AuditEvent[]       @relation("AuditActor")
-  ownedSpaces       Space[]            @relation("SpaceOwner")
-  memberships       SpaceMember[]
-  createdInvites    Invitation[]       @relation("InvitationCreatedBy")
+  devices        Device[]
+  challenges     Challenge[]
+  refreshTokens  RefreshToken[]
+  auditEvents    AuditEvent[]    @relation("AuditActor")
+  ownedSpaces    Space[]         @relation("SpaceOwner")
+  memberships    SpaceMember[]
+  createdInvites Invitation[]    @relation("InvitationCreatedBy")
+  remoteSessions RemoteSession[] @relation("RemoteViewer")
 
   @@index([email])
   @@map("users")
@@ -62,24 +63,24 @@ enum DeviceKind {
 /// pair; the private half stays on the device (Windows DPAPI), and only
 /// `publicKey` reaches the server. Revoking one row never touches another.
 model Device {
-  id             String         @id @default(uuid())
-  userId         String
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  installationId String
-  name           String
-  platform       DevicePlatform
-  kind           DeviceKind     @default(desktop)
-  osVersion      String?
-  appVersion     String?
+  id                  String         @id @default(uuid())
+  userId              String
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installationId      String
+  name                String
+  platform            DevicePlatform
+  kind                DeviceKind     @default(desktop)
+  osVersion           String?
+  appVersion          String?
   // Base64url Ed25519 public key. Unique across the whole system so a key can
   // never be silently re-registered against a second account.
-  publicKey      String         @unique
-  trusted        Boolean        @default(false)
-  trustedAt      DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  lastSeenAt     DateTime?
-  revokedAt      DateTime?
+  publicKey           String         @unique
+  trusted             Boolean        @default(false)
+  trustedAt           DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  lastSeenAt          DateTime?
+  revokedAt           DateTime?
   // Coarse, city-level at best. Derived from the request IP, never GPS.
   approximateLocation String?
   lastIpAddress       String?
@@ -106,21 +107,21 @@ enum ChallengePurpose {
 /// A pending six-digit code. The code itself is never stored — only a SHA-256
 /// hash of it, so a database read cannot reveal a live code.
 model Challenge {
-  id        String           @id @default(uuid())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceId  String?
-  device    Device?          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  purpose   ChallengePurpose
-  codeHash  String
-  expiresAt DateTime
+  id                String           @id @default(uuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId          String?
+  device            Device?          @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  purpose           ChallengePurpose
+  codeHash          String
+  expiresAt         DateTime
   // Set the moment a code is accepted, which makes the code single-use.
-  consumedAt DateTime?
-  attempts   Int      @default(0)
-  maxAttempts Int     @default(5)
-  resendCount Int     @default(0)
-  lastSentAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
+  consumedAt        DateTime?
+  attempts          Int              @default(0)
+  maxAttempts       Int              @default(5)
+  resendCount       Int              @default(0)
+  lastSentAt        DateTime         @default(now())
+  createdAt         DateTime         @default(now())
   // Carried through device verification so "Trust This Device" survives the
   // round trip without the client being able to alter the pending device.
   pendingDeviceName String?
@@ -138,21 +139,21 @@ model Challenge {
 /// rotated; presenting an already-rotated token is treated as theft and kills
 /// the whole chain.
 model RefreshToken {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceId     String
-  device       Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  tokenHash    String    @unique
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId      String
+  device        Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  tokenHash     String    @unique
   // Every token in one login lineage shares a family id, so a detected reuse
   // can revoke exactly that lineage and nothing else.
-  familyId     String
-  expiresAt    DateTime
-  createdAt    DateTime  @default(now())
-  rotatedAt    DateTime?
-  revokedAt    DateTime?
+  familyId      String
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  rotatedAt     DateTime?
+  revokedAt     DateTime?
   revokedReason String?
-  replacedById String?   @unique
+  replacedById  String?   @unique
 
   @@index([userId, deviceId])
   @@index([familyId])
@@ -172,16 +173,17 @@ model Space {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members     SpaceMember[]
-  agents      Agent[]
-  invitations Invitation[]
-  auditEvents AuditEvent[]
-  resources   Resource[]
+  members          SpaceMember[]
+  agents           Agent[]
+  invitations      Invitation[]
+  auditEvents      AuditEvent[]
+  resources        Resource[]
   enrollmentTokens AgentEnrollmentToken[]
-  dataPool    DataPool?
-  powerCommands PowerCommand[]
-  fileTransfers FileTransfer[]
-  printJobs     PrintJob[]
+  dataPool         DataPool?
+  powerCommands    PowerCommand[]
+  fileTransfers    FileTransfer[]
+  printJobs        PrintJob[]
+  remoteSessions   RemoteSession[]
 
   @@index([ownerId])
   @@map("spaces")
@@ -224,24 +226,25 @@ enum AgentStatus {
 /// The background service half of a NetLink installation. Registered in
 /// Phase 2; the row exists now so device enrollment has somewhere to point.
 model Agent {
-  id            String      @id @default(uuid())
-  spaceId       String
-  space         Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  deviceId      String      @unique
-  device        Device      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  status        AgentStatus @default(offline)
+  id              String      @id @default(uuid())
+  spaceId         String
+  space           Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  deviceId        String      @unique
+  device          Device      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  status          AgentStatus @default(offline)
   lastHeartbeatAt DateTime?
   // Registered out-of-band by the owner, used for Wake-on-LAN targeting.
-  macAddress    String?
-  localIpAddress String?
-  isWakeHelper  Boolean     @default(false)
-  wakeOnLanReady Boolean    @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  macAddress      String?
+  localIpAddress  String?
+  isWakeHelper    Boolean     @default(false)
+  wakeOnLanReady  Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  resources Resource[]
-  powerCommandsAsTarget PowerCommand[] @relation("PowerTarget")
-  powerCommandsAsHelper PowerCommand[] @relation("PowerHelper")
+  resources             Resource[]
+  powerCommandsAsTarget PowerCommand[]  @relation("PowerTarget")
+  powerCommandsAsHelper PowerCommand[]  @relation("PowerHelper")
+  remoteSessions        RemoteSession[]
 
   @@index([spaceId])
   @@map("agents")
@@ -260,21 +263,21 @@ enum InvitationStatus {
 
 /// A NetLink Pass. The claim token is stored hashed and can be redeemed once.
 model Invitation {
-  id            String           @id @default(uuid())
-  spaceId       String
-  space         Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  createdById   String
-  createdBy     User             @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  inviteeEmail  String?
-  tokenHash     String           @unique
-  permissions   String[]         @default([])
-  status        InvitationStatus @default(pending)
-  allowResharing Boolean         @default(false)
-  expiresAt     DateTime
-  claimedAt     DateTime?
+  id              String           @id @default(uuid())
+  spaceId         String
+  space           Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdBy       User             @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  inviteeEmail    String?
+  tokenHash       String           @unique
+  permissions     String[]         @default([])
+  status          InvitationStatus @default(pending)
+  allowResharing  Boolean          @default(false)
+  expiresAt       DateTime
+  claimedAt       DateTime?
   claimedByUserId String?
-  revokedAt     DateTime?
-  createdAt     DateTime         @default(now())
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
 
   // Data-Only pass terms. Null for passes that are not data allocations.
   totalDataBytes Decimal? @db.Decimal(20, 0)
@@ -297,20 +300,20 @@ enum AuditOutcome {
 /// Append-only record of security-relevant activity. Carries no file contents,
 /// message text, credentials or precise location — only what happened.
 model AuditEvent {
-  id            String       @id @default(uuid())
-  action        String
-  outcome       AuditOutcome
-  actorUserId   String?
-  actorUser     User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
-  actorDeviceId String?
-  targetDeviceId String?
-  spaceId       String?
-  space         Space?       @relation(fields: [spaceId], references: [id], onDelete: SetNull)
-  ipAddress     String?
-  userAgent     String?
+  id                  String       @id @default(uuid())
+  action              String
+  outcome             AuditOutcome
+  actorUserId         String?
+  actorUser           User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorDeviceId       String?
+  targetDeviceId      String?
+  spaceId             String?
+  space               Space?       @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  ipAddress           String?
+  userAgent           String?
   approximateLocation String?
-  metadata      Json?
-  createdAt     DateTime     @default(now())
+  metadata            Json?
+  createdAt           DateTime     @default(now())
 
   @@index([actorUserId, createdAt])
   @@index([spaceId, createdAt])
@@ -393,10 +396,10 @@ model Resource {
 /// labelled as such everywhere it surfaces; a real provider is added by
 /// implementing the same adapter interface, not by changing this model.
 model DataPool {
-  id        String   @id @default(uuid())
-  spaceId   String   @unique
-  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  provider  String   @default("demo")
+  id         String   @id @default(uuid())
+  spaceId    String   @unique
+  space      Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  provider   String   @default("demo")
   /// The account identifier at the provider (a mobile number, a subscriber id).
   accountRef String
   /// Whatever the adapter needs to describe the plan. Never a credential.
@@ -422,28 +425,28 @@ enum AllocationStatus {
 /// and its usage arithmetic stay exact — a float would silently lose precision
 /// at exactly the scale that matters for billing.
 model DataAllocation {
-  id        String           @id @default(uuid())
-  poolId    String
-  pool      DataPool         @relation(fields: [poolId], references: [id], onDelete: Cascade)
-  spaceId   String
-  memberId  String           @unique
-  member    SpaceMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  status    AllocationStatus @default(active)
+  id       String           @id @default(uuid())
+  poolId   String
+  pool     DataPool         @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  spaceId  String
+  memberId String           @unique
+  member   SpaceMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status   AllocationStatus @default(active)
 
-  totalBytes    Decimal  @db.Decimal(20, 0)
-  dailyBytes    Decimal? @db.Decimal(20, 0)
-  usedBytes     Decimal  @default(0) @db.Decimal(20, 0)
-  usedTodayBytes Decimal @default(0) @db.Decimal(20, 0)
+  totalBytes     Decimal   @db.Decimal(20, 0)
+  dailyBytes     Decimal?  @db.Decimal(20, 0)
+  usedBytes      Decimal   @default(0) @db.Decimal(20, 0)
+  usedTodayBytes Decimal   @default(0) @db.Decimal(20, 0)
   /// The day `usedTodayBytes` counts, so the daily figure resets on its own
   /// rather than needing a scheduled job.
-  usageDay      DateTime?
+  usageDay       DateTime?
 
-  expiresAt DateTime
+  expiresAt      DateTime
   /// Whether the holder may pass their allocation on. Off by default.
-  allowResharing Boolean @default(false)
+  allowResharing Boolean  @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   pausedAt  DateTime?
   revokedAt DateTime?
 
@@ -458,16 +461,16 @@ model DataAllocation {
 /// Records quantity, session time and which device — never a destination, a
 /// hostname or anything resembling browsing history.
 model DataUsageEvent {
-  id           String   @id @default(uuid())
-  allocationId String
-  allocation   DataAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
-  bytes        Decimal  @db.Decimal(20, 0)
-  sessionSeconds Int     @default(0)
-  deviceId     String?
+  id             String         @id @default(uuid())
+  allocationId   String
+  allocation     DataAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  bytes          Decimal        @db.Decimal(20, 0)
+  sessionSeconds Int            @default(0)
+  deviceId       String?
   /// Provider's own id for this record, so a replayed webhook is idempotent.
-  providerRef  String?  @unique
-  occurredAt   DateTime
-  createdAt    DateTime @default(now())
+  providerRef    String?        @unique
+  occurredAt     DateTime
+  createdAt      DateTime       @default(now())
 
   @@index([allocationId, occurredAt])
   @@map("data_usage_events")
@@ -494,23 +497,23 @@ enum PowerCommandState {
 /// delivery, so a database read cannot yield a usable command. What is stored
 /// is the record of what was asked for, by whom, and what happened.
 model PowerCommand {
-  id        String            @id @default(uuid())
-  spaceId   String
-  space     Space             @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  id            String  @id @default(uuid())
+  spaceId       String
+  space         Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   /// The computer the command is for.
   targetAgentId String
-  targetAgent   Agent         @relation("PowerTarget", fields: [targetAgentId], references: [id], onDelete: Cascade)
+  targetAgent   Agent   @relation("PowerTarget", fields: [targetAgentId], references: [id], onDelete: Cascade)
   /// For a wake, the computer asked to send the magic packet. Null otherwise.
   helperAgentId String?
-  helperAgent   Agent?        @relation("PowerHelper", fields: [helperAgentId], references: [id], onDelete: SetNull)
+  helperAgent   Agent?  @relation("PowerHelper", fields: [helperAgentId], references: [id], onDelete: SetNull)
 
-  action        String
-  state         PowerCommandState @default(pending)
-  requestedById String
+  action              String
+  state               PowerCommandState @default(pending)
+  requestedById       String
   requestedByDeviceId String?
 
-  nonce     String   @unique
-  issuedAt  DateTime @default(now())
+  nonce     String    @unique
+  issuedAt  DateTime  @default(now())
   expiresAt DateTime
   /// When the ten-second countdown ends and the command may actually be sent.
   executeAt DateTime?
@@ -552,24 +555,24 @@ enum TransferState {
 /// never touch this database or this server — they move directly between the
 /// owner's devices, which is why a control-plane compromise cannot leak files.
 model FileTransfer {
-  id         String            @id @default(uuid())
-  spaceId    String
-  space      Space             @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  resourceId String
-  resource   Resource          @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  agentId    String
-  requestedById String
-  direction  TransferDirection
+  id               String            @id @default(uuid())
+  spaceId          String
+  space            Space             @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  resourceId       String
+  resource         Resource          @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  agentId          String
+  requestedById    String
+  direction        TransferDirection
   /// Relative to the approved folder. Recorded so an owner can see what moved.
-  path       String
-  state      TransferState     @default(pending)
-  sizeBytes         Decimal?   @db.Decimal(20, 0)
-  transferredBytes  Decimal    @default(0) @db.Decimal(20, 0)
-  checksum   String?
-  detail     String?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  completedAt DateTime?
+  path             String
+  state            TransferState     @default(pending)
+  sizeBytes        Decimal?          @db.Decimal(20, 0)
+  transferredBytes Decimal           @default(0) @db.Decimal(20, 0)
+  checksum         String?
+  detail           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  completedAt      DateTime?
 
   @@index([spaceId, createdAt])
   @@index([agentId, state])
@@ -589,28 +592,121 @@ enum PrintJobState {
 /// The document is held only until the agent collects it, then dropped. A
 /// printed page is content, and the control plane does not keep content.
 model PrintJob {
-  id         String        @id @default(uuid())
-  spaceId    String
-  space      Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  resourceId String
-  resource   Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  agentId    String
+  id            String        @id @default(uuid())
+  spaceId       String
+  space         Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  resourceId    String
+  resource      Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  agentId       String
   requestedById String
-  printerName String
-  documentName String
+  printerName   String
+  documentName  String
   /// The PDF, base64, cleared the moment the agent takes it.
-  document   String?
-  copies     Int           @default(1)
-  colour     Boolean       @default(true)
-  paperSize  String        @default("A4")
-  state      PrintJobState @default(queued)
-  detail     String?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  collectedAt DateTime?
-  completedAt DateTime?
+  document      String?
+  copies        Int           @default(1)
+  colour        Boolean       @default(true)
+  paperSize     String        @default("A4")
+  state         PrintJobState @default(queued)
+  detail        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  collectedAt   DateTime?
+  completedAt   DateTime?
 
   @@index([agentId, state])
   @@index([spaceId, createdAt])
   @@map("print_jobs")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6 — remote desktop
+// ---------------------------------------------------------------------------
+
+enum RemoteSessionMode {
+  view
+  control
+}
+
+enum RemoteSessionState {
+  pending
+  connecting
+  active
+  ended
+}
+
+/// A remote desktop session.
+///
+/// This row is the whole of what the control plane knows: who connected to
+/// which computer, in which mode, for how long, and whether the media went
+/// direct or through a relay. The pixels and the keystrokes never come near it.
+///
+/// `mode` is authoritative and immutable once written — it is copied into a
+/// signed grant that the agent verifies, which is what makes "view only" a
+/// boundary rather than a label on a button.
+model RemoteSession {
+  id             String  @id @default(uuid())
+  spaceId        String
+  space          Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  agentId        String
+  agent          Agent   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  viewerId       String
+  viewer         User    @relation("RemoteViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  /// The viewer's device, so revoking that device can end the session.
+  viewerDeviceId String?
+
+  mode  RemoteSessionMode
+  state RemoteSessionState @default(pending)
+
+  /// Single-use, inside the signed grant. Stops a captured grant being reused.
+  nonce     String   @unique
+  issuedAt  DateTime @default(now())
+  /// When the grant stops being usable to open a connection.
+  expiresAt DateTime
+
+  connectedAt   DateTime?
+  endedAt       DateTime?
+  endReason     String?
+  /// direct, relayed or unknown, derived from the candidate pair in use.
+  strategy      String    @default("unknown")
+  /// Reset by viewer heartbeats and by input; drives the idle timeout.
+  lastSeenAt    DateTime  @default(now())
+  /// How many input events the host refused because the session was view-only.
+  refusedInputs Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  signals RemoteSignal[]
+
+  @@index([agentId, state])
+  @@index([spaceId, createdAt])
+  @@index([viewerId, state])
+  @@map("remote_sessions")
+}
+
+enum SignalRole {
+  viewer
+  host
+}
+
+/// One signalling message, on its way between the two peers.
+///
+/// Offers, answers and ICE candidates only — bounded in size, ordered by `seq`,
+/// and deleted with the session. This is a post box, not a channel: neither
+/// side can use it to move anything the other could not already send directly.
+model RemoteSignal {
+  id          String        @id @default(uuid())
+  sessionId   String
+  session     RemoteSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seq         Int
+  from        SignalRole
+  kind        String
+  payload     String
+  createdAt   DateTime      @default(now())
+  /// Set once the other side has read it, so a poll never re-delivers.
+  deliveredAt DateTime?
+
+  @@unique([sessionId, seq])
+  @@index([sessionId, seq])
+  @@map("remote_signals")
 }

@@ -4,6 +4,7 @@ import type {
   ApprovedFolder,
   ApproveFolderRequest,
   CreatePassRequest,
+  CreateRemoteSessionRequest,
   DataPoolSummary,
   MemberAccessRow,
   MyAllocation,
@@ -13,7 +14,12 @@ import type {
   PowerCommandSummary,
   PrintJob,
   PrintJobRequest,
+  RemoteEndReason,
+  RemoteSessionSummary,
+  RemoteSessionTicket,
+  RemoteSignal,
   SharedPrinter,
+  SignalKind,
   StartTransferRequest,
   Transfer,
   UpdateAllocationRequest,
@@ -346,6 +352,58 @@ export class NetLinkApi {
 
   listPrintJobs(spaceId: string, limit = 25): Promise<PrintJob[]> {
     return this.request('GET', `/spaces/${spaceId}/printers/jobs?limit=${limit}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Remote desktop
+  // -------------------------------------------------------------------------
+
+  listRemoteSessions(spaceId: string, limit = 20): Promise<RemoteSessionSummary[]> {
+    return this.request('GET', `/spaces/${spaceId}/remote/sessions?limit=${limit}`);
+  }
+
+  requestRemoteStepUp(spaceId: string): Promise<{ challengeId: string; maskedEmail: string }> {
+    return this.request('POST', `/spaces/${spaceId}/remote/step-up`);
+  }
+
+  createRemoteSession(
+    spaceId: string,
+    body: CreateRemoteSessionRequest,
+  ): Promise<RemoteSessionTicket> {
+    return this.request('POST', `/spaces/${spaceId}/remote/sessions`, { body });
+  }
+
+  getRemoteSession(spaceId: string, sessionId: string): Promise<RemoteSessionSummary> {
+    return this.request('GET', `/spaces/${spaceId}/remote/sessions/${sessionId}`);
+  }
+
+  remoteHeartbeat(spaceId: string, sessionId: string): Promise<RemoteSessionSummary> {
+    return this.request('POST', `/spaces/${spaceId}/remote/sessions/${sessionId}/heartbeat`);
+  }
+
+  sendRemoteSignal(
+    spaceId: string,
+    sessionId: string,
+    kind: SignalKind,
+    payload: string,
+  ): Promise<{ seq: number }> {
+    return this.request('POST', `/spaces/${spaceId}/remote/sessions/${sessionId}/signal`, {
+      body: { sessionId, kind, payload },
+    });
+  }
+
+  collectRemoteSignals(spaceId: string, sessionId: string): Promise<RemoteSignal[]> {
+    return this.request('GET', `/spaces/${spaceId}/remote/sessions/${sessionId}/signals`);
+  }
+
+  endRemoteSession(
+    spaceId: string,
+    sessionId: string,
+    reason: RemoteEndReason,
+  ): Promise<RemoteSessionSummary> {
+    return this.request('POST', `/spaces/${spaceId}/remote/sessions/${sessionId}/end`, {
+      body: { reason },
+    });
   }
 
   /** The URL the live-updates socket connects to, with the current token. */

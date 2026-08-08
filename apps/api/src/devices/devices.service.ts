@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { SessionService } from '../auth/session.service';
 import { LiveGateway } from '../live/live.gateway';
+import { RemoteService } from '../remote/remote.service';
 import type { RequestContext } from '../common/request-context';
 import { toAuthenticatedDevice } from '../auth/auth.service';
 
@@ -14,6 +15,7 @@ export class DevicesService {
     private readonly audit: AuditService,
     private readonly sessions: SessionService,
     private readonly live: LiveGateway,
+    private readonly remote: RemoteService,
   ) {}
 
   /** Every device on the account, newest first, with the caller's own marked. */
@@ -78,6 +80,11 @@ export class DevicesService {
     // otherwise revocation would be immediate for HTTP and not for push.
     this.live.disconnectDevice(device.id);
 
+    // A peer connection is not an API call, so cutting HTTP and WebSocket would
+    // leave a revoked laptop still streaming someone's screen. Revocation has
+    // to reach the one channel that does not pass through this server.
+    const endedRemote = await this.remote.endSessionsForDevice(device.id);
+
     // Any pending verification for this device is dead too, so a code already
     // in someone's inbox cannot be used to bring it back.
     await this.prisma.challenge.updateMany({
@@ -92,7 +99,11 @@ export class DevicesService {
       actorDeviceId: context ? deviceId : null,
       targetDeviceId: device.id,
       context,
-      metadata: { deviceName: device.name, sessionsEnded: killedSessions },
+      metadata: {
+        deviceName: device.name,
+        sessionsEnded: killedSessions,
+        remoteSessionsEnded: endedRemote,
+      },
     });
 
     return toAuthenticatedDevice(revoked);

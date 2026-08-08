@@ -25,6 +25,7 @@ describe('permission catalogue', () => {
       'data.use',
       'data.manage',
       'devices.view',
+      'devices.observe',
       'devices.control',
       'files.read',
       'files.upload',

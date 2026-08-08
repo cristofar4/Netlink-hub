@@ -109,6 +109,7 @@ type HeartbeatRequest struct {
 type HeartbeatResponse struct {
 	Acknowledged             bool              `json:"acknowledged"`
 	Revoked                  bool              `json:"revoked"`
+	AgentID                  string            `json:"agentId,omitempty"`
 	Message                  string            `json:"message,omitempty"`
 	HeartbeatIntervalSeconds int               `json:"heartbeatIntervalSeconds"`
 	PendingCommands          []json.RawMessage `json:"pendingCommands"`
@@ -142,6 +143,7 @@ type EnrollRequest struct {
 // EnrollResponse is the control plane's assignment for this device.
 type EnrollResponse struct {
 	DeviceID                 string `json:"deviceId"`
+	AgentID                  string `json:"agentId"`
 	SpaceID                  string `json:"spaceId"`
 	SpaceName                string `json:"spaceName"`
 	HeartbeatIntervalSeconds int    `json:"heartbeatIntervalSeconds"`
@@ -335,4 +337,70 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max] + "…"
+}
+
+// ---------------------------------------------------------------------------
+// Remote desktop
+// ---------------------------------------------------------------------------
+
+// CollectRemoteGrants fetches signed session grants waiting for this machine.
+//
+// Returned raw so the caller verifies the signature before anything in the
+// payload is treated as true. Decoding into a struct here would make it easy for
+// a future change to read a field off an unverified grant.
+func (c *Client) CollectRemoteGrants(ctx context.Context) ([]json.RawMessage, error) {
+	var out []json.RawMessage
+	if err := c.postSigned(ctx, "/agent/remote/grants", map[string]string{}, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SendRemoteSignal posts one SDP or ICE message to the viewer.
+func (c *Client) SendRemoteSignal(ctx context.Context, sessionID, kind, payload string) error {
+	return c.postSigned(ctx, "/agent/remote/sessions/"+sessionID+"/signal", map[string]string{
+		"sessionId": sessionID,
+		"kind":      kind,
+		"payload":   payload,
+	}, nil)
+}
+
+// RemoteSignal is one message from the viewer.
+type RemoteSignal struct {
+	Seq     int    `json:"seq"`
+	Kind    string `json:"kind"`
+	Payload string `json:"payload"`
+}
+
+// CollectRemoteSignals reads the messages the viewer has posted.
+func (c *Client) CollectRemoteSignals(ctx context.Context, sessionID string) ([]RemoteSignal, error) {
+	var out []RemoteSignal
+	if err := c.postSigned(ctx, "/agent/remote/sessions/"+sessionID+"/signals", map[string]string{}, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReportRemoteConnected tells the control plane the peer connection came up, and
+// which candidate types carried it.
+func (c *Client) ReportRemoteConnected(ctx context.Context, sessionID, localType, remoteType string) error {
+	return c.postSigned(ctx, "/agent/remote/connected", map[string]string{
+		"deviceId":            c.deviceID,
+		"sessionId":           sessionID,
+		"localCandidateType":  localType,
+		"remoteCandidateType": remoteType,
+	}, nil)
+}
+
+// ReportRemoteViolation records input refused on a view-only session.
+//
+// The refusal already happened here. This is a notification that someone is
+// running a client we did not ship, not a request for a ruling.
+func (c *Client) ReportRemoteViolation(ctx context.Context, sessionID string, count int) error {
+	return c.postSigned(ctx, "/agent/remote/violation", map[string]any{
+		"deviceId":  c.deviceID,
+		"sessionId": sessionID,
+		"kind":      "input_on_view_only",
+		"count":     count,
+	}, nil)
 }

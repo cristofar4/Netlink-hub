@@ -81,6 +81,23 @@ export class CommandSigner implements OnModuleInit {
     return { keyId: this.keyId, publicKey: this.publicKeyB64, algorithm: 'ed25519' };
   }
 
+  /** The key id, for signers of other message types that share this key. */
+  id(): string {
+    return this.keyId;
+  }
+
+  /**
+   * The private key, for the remote-session grant signer.
+   *
+   * Exposed to one collaborator inside the process rather than duplicating the
+   * key material or standing up a second key pair that agents would also have
+   * to fetch, pin and rotate. Every message type signed with it carries its own
+   * domain string, so the two can never be confused for one another.
+   */
+  privateKeyRef(): KeyObject {
+    return this.privateKey;
+  }
+
   sign(command: SignedCommand['command']): SignedCommand {
     const signature = sign(null, buildSigningInput(command), this.privateKey);
     return {

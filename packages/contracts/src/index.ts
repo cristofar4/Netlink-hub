@@ -5,5 +5,6 @@ export * from './spaces';
 export * from './data';
 export * from './power';
 export * from './files';
+export * from './remote';
 export * from './connection';
 export * from './health';

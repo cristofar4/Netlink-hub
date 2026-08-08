@@ -78,16 +78,8 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'network',
     label: 'Network Access',
-    description: 'How this device reaches your Spaces',
-    phase: 6,
-    placeholder:
-      'Network Access shows how a connection is being made — directly between your devices where possible, or through an end-to-end encrypted relay when your network will not allow a direct path.',
-    capabilities: [
-      'Direct peer connections over WebRTC with ICE, STUN and TURN',
-      'End-to-end encrypted relay fallback',
-      'Connection quality, latency and route visibility',
-      'Optional WireGuard private networking, considered later',
-    ],
+    description: 'Watch or control a computer in this Space',
+    phase: 1,
     icon: icon(
       <>
         <path d="M12 20v-6" />

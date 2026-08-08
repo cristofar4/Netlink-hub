@@ -125,6 +125,10 @@ export class AgentsService {
 
     return {
       deviceId: device.id,
+      // The Agent row's id, not the Device's. Remote session grants are
+      // addressed to this, and the agent has to be able to recognise one that
+      // names it.
+      agentId: agent.id,
       spaceId: enrollment.spaceId,
       spaceName: enrollment.space.name,
       heartbeatIntervalSeconds: AGENT_HEARTBEAT_INTERVAL_SECONDS,
@@ -276,6 +280,10 @@ export class AgentsService {
     return {
       acknowledged: true,
       revoked: false,
+      // Repeated on every beat, not just at enrollment, so an installation that
+      // enrolled before this field existed learns its own agent id without
+      // anyone having to re-enroll it.
+      agentId: agent.id,
       heartbeatIntervalSeconds: AGENT_HEARTBEAT_INTERVAL_SECONDS,
       pendingCommands: [],
     };

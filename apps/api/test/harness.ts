@@ -71,7 +71,7 @@ export async function createTestHarness(): Promise<TestHarness> {
     // Truncate rather than drop: far faster between tests, and it resets the
     // identity sequences too.
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE audit_events, refresh_tokens, challenges, request_nonces, power_commands, file_transfers, print_jobs, agent_enrollment_tokens, resources, data_usage_events, data_allocations, data_pools, agents, space_members, invitations, spaces, devices, users RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE audit_events, refresh_tokens, challenges, request_nonces, remote_signals, remote_sessions, power_commands, file_transfers, print_jobs, agent_enrollment_tokens, resources, data_usage_events, data_allocations, data_pools, agents, space_members, invitations, spaces, devices, users RESTART IDENTITY CASCADE',
     );
     mail.clear();
     // The demo provider keeps allocations and usage in memory, so it has to be

@@ -5,12 +5,19 @@
  * invited member holding a NetLink Pass) has *only* the capabilities explicitly
  * granted to it. There is no implicit inheritance: holding `data.use` never
  * implies `files.read`, and holding `devices.view` never implies `power.*`.
+ *
+ * `devices.observe` — watching a screen — is deliberately separate from
+ * `devices.control`. Folding the two together would make "view only" a label
+ * rather than a boundary: everyone allowed to watch would also be allowed to
+ * type. Keeping them apart is what lets an owner hand out one without the
+ * other, and is what the agent's view-only gate actually enforces.
  */
 
 export const PERMISSIONS = [
   'data.use',
   'data.manage',
   'devices.view',
+  'devices.observe',
   'devices.control',
   'files.read',
   'files.upload',
@@ -41,6 +48,7 @@ export const PERMISSION_LABELS: Readonly<Record<Permission, string>> = {
   'data.use': 'Use shared data',
   'data.manage': 'Manage the Data Pool',
   'devices.view': 'See computers in this Space',
+  'devices.observe': "Watch a computer's screen, without control",
   'devices.control': 'Remotely control computers',
   'files.read': 'Browse and download approved files',
   'files.upload': 'Upload files',

@@ -1,7 +1,7 @@
 # NetLink Project Status
 
-**Last updated:** end of Phase 5
-**Current state:** Phases 0 through 5 complete. All checks and builds passing.
+**Last updated:** end of Phase 6
+**Current state:** Phases 0 through 6 complete. All checks and builds passing.
 
 This document is the honest record of what NetLink actually does today. Anything not listed as complete is not built, however finished the navigation may look.
 
@@ -18,15 +18,16 @@ Every number below was produced by running the checks, not estimated.
 | ESLint (API) | Clean |
 | `go vet` (agent, desktop) | Clean |
 | TypeScript — contracts, ui, api, frontend | Clean |
-| Contract tests | **33 passed** |
-| API tests (unit + integration, real PostgreSQL) | **219 passed**, 9 suites |
-| Go tests (agent) | **118 passed**, 7 packages |
+| Contract tests | **48 passed** |
+| API tests (unit + integration, real PostgreSQL) | **264 passed**, 10 suites |
+| Go tests (agent) | **176 passed**, 8 packages |
 | Frontend tests | **25 passed** |
-| **Total automated tests** | **395 passed, 0 failing** |
+| **Total automated tests** | **513 passed, 0 failing** |
 | Production builds — contracts, API, frontend, agent | All succeed |
 | Windows cross-compile — agent, desktop | Both succeed (DPAPI path compiles) |
 | End-to-end UI walkthrough (Playwright, real API) | Full flow passes, no console errors |
-| Real Go agent against the real API | Enrolls, heartbeats, registers resources, collects and executes signed commands |
+| Real Go agent against the real API | Enrols, heartbeats, registers resources, collects and executes signed commands |
+| Real WebRTC session, end to end | A real peer connection through the real control plane: frames delivered, view-only input refused and audited |
 
 Run it yourself: `.\scripts\test-all.ps1`
 
@@ -189,6 +190,67 @@ Arbitrary remote shell execution. A test fails if an action resembling `exec`, `
 
 ---
 
+## Phase 6 — Remote desktop ✅
+
+### The problem this phase is shaped around
+
+The pixels and the keystrokes travel **directly between the two machines** over
+WebRTC. The control plane never sees either. That is good for privacy — a
+compromise of the server cannot replay anyone's screen, because there is nothing
+there to replay — and it has one hard consequence:
+
+**The server cannot be the thing that stops a view-only session from typing.**
+It never sees the input.
+
+So the mode is fixed when the session is authorised, sealed inside an Ed25519
+grant, and enforced by the agent, which is the only party that can refuse to
+move the mouse. A viewer who edits their own copy of the grant to say `control`
+produces something that fails verification on the host.
+
+### `devices.observe` — a sixteenth permission
+
+Deliberately added, and worth stating plainly since the brief named fifteen.
+Watching a screen is now separate from controlling one. Without the split,
+"view only" would be a label rather than a boundary: anyone allowed to watch
+would also be allowed to type, and there would be nothing for the host to
+enforce. Control requires **both** — controlling a machine you cannot see is not
+a coherent thing to grant, and it means revoking observe genuinely revokes
+control.
+
+### What is enforced, and where
+
+| | Enforced by | Proven by |
+|---|---|---|
+| May this person start a session at all | Control plane, deny-by-default | Integration tests: observe-only cannot take control; control-without-observe is refused; a non-member gets 404 |
+| Which mode the session is in | Ed25519 signature over the grant | `TestChangingTheModeInvalidatesTheSignature`, plus an API test that re-verifies a mode-swapped grant and finds it invalid |
+| Whether an input event moves anything | **The agent**, against the verified grant | 30+ Go tests, including one over a real peer connection |
+| Confirmation before taking control | Six-digit step-up code, same as a shutdown | Integration tests for missing, wrong and reused codes |
+
+### Connections
+- ICE with STUN and TURN. **TURN credentials are minted per session** with coturn's REST convention: the username *is* the expiry, the password is an HMAC of it. A leaked pair stops working in minutes and cannot be extended
+- The ticket says **honestly** whether a relay is available, so the UI does not spin on a connection that cannot happen
+- Direct versus relayed is read from the candidate pair actually in use and shown to the person, because a relay is slower and their traffic is taking a detour
+
+### Sessions end, reliably
+Four separate ways, because "still connected" stops being true in four different
+ways: the viewer leaves, the viewer stops saying it is there, the computer goes
+offline, or the four-hour ceiling is reached. Plus one more that matters most —
+**revoking a device ends its live session**, because cutting HTTP and the
+WebSocket while a screen keeps streaming would make revocation a half-measure.
+
+### What is recorded
+Who connected, to which computer, in which mode, for how long, and whether it
+went direct or relayed. Never a frame, never a keystroke — they never reached
+the server. Signalling messages are deleted the moment the session ends; they
+are the only remote-desktop bytes the control plane ever holds.
+
+### Honest limitations
+- **Frames are JPEG over a data channel, not a VP8 or H.264 video track.** A pure-Go encoder would be slower than JPEG and a cgo one would end the agent's single-binary property. The transport underneath is the same encrypted peer connection either way, so nothing about the security story changes — a video track is an efficiency upgrade, not a correctness one.
+- **Ctrl+Alt+Delete cannot be sent, and UAC prompts cannot be reached.** The secure attention sequence is reserved for physically-present users by design. NetLink does not work around that.
+- Protected video comes back black. That is DRM working, not NetLink failing.
+
+---
+
 ## What is real and what is simulated
 
 Stated plainly, because this is the question that matters most.
@@ -204,13 +266,13 @@ Stated plainly, because this is the question that matters most.
 - **Signed power commands** — real Ed25519 signing, real replay protection, really executed on Windows via `ExitWindowsEx` / `SetSuspendState` / `LockWorkStation`
 - **File browsing, transfers and deletion** — real filesystem work through the vault, on real approved folders
 - **Printer discovery and printing** — real `Get-Printer` enumeration and real jobs
+- **Remote desktop** — a real WebRTC peer connection carrying real captured frames, verified end to end against the real control plane with a real Go agent. Screen capture is GDI on Windows; on other platforms it returns a labelled test pattern, because NetLink hosts sessions on Windows
 - The permission model — real deny-by-default evaluation, shared by API and UI
 - The Spaces map — every node reflects live API state
 
 ### Not real yet, and shown as such
 
 - **The Data Pool is a Demo Provider.** The allocation logic, limits, expiry, pausing and isolation are all real and tested; the *network data* is simulated. No carrier is connected. Every screen showing its numbers says "Demo Provider" on it. **A real adapter needs a commercial agreement — see the questions below.**
-- **Remote desktop.** Interfaces only. **Phase 6.**
 - **Production hardening.** Rate limiting is per-process, installers are unsigned, there is no automatic update channel. **Phase 7.**
 
 ### Deliberately absent, permanently
@@ -227,7 +289,6 @@ Stated plainly, because this is the question that matters most.
 
 | Phase | Scope | State |
 |---|---|---|
-| 6 | WebRTC signalling, direct and relay strategy, screen, input, view-only enforcement | Interfaces defined |
 | 7 | Signed installers, auto-update, distributed rate limiting, monitoring, backups, external review | Not started |
 
 ---
@@ -242,6 +303,8 @@ Stated plainly, because this is the question that matters most.
 | Installers are not signed | | Phase 7 |
 | No external security review | | Phase 7 |
 | Only the Demo Provider exists | A real one needs a carrier agreement, not more code | Blocked on a commercial decision |
+| No TURN server is configured by default | STUN is harmless to point at a public server; a relay carries real traffic and should be yours. Without one, remote desktop works only where a direct path exists | Deployment |
+| Remote frames are JPEG, not a video track | A pure-Go video encoder would be slower; a cgo one would end the agent's single-binary property | Later, as an efficiency change |
 | TLS terminates at your reverse proxy | The API binds plain HTTP and expects a proxy in front. Do not expose it directly | Deployment |
 
 ---
@@ -262,6 +325,9 @@ Recorded here so they can be overridden deliberately rather than discovered by s
 10. **Byte counts are `Decimal(20,0)` and cross the wire as strings.** A terabyte in bytes exceeds `Number.MAX_SAFE_INTEGER`; a float would quietly lose the last digits of a usage figure someone is being billed against.
 11. **Power command timestamps use a pinned layout on both sides.** Go and JavaScript disagree about trailing zeros in fractional seconds, and a signature does not tolerate disagreement.
 12. **A non-member gets 404 from a Space, not 403.** 403 confirms the Space exists.
+13. **`devices.observe` is a sixteenth permission**, added deliberately. Folding screen-watching into `devices.control` would make view-only a label rather than a boundary — see Phase 6 above.
+14. **Remote session grants reuse the control plane's existing signing key**, separated from power commands by a domain string at the head of the signing input. A second key would be a second thing to rotate and a second thing to get wrong; a test proves a power command cannot be replayed as a session grant.
+15. **Signalling appends are serialised with a row lock on the session.** ICE emits candidates in parallel, so assigning sequence numbers by reading the highest and then inserting loses the race — and retrying does not help when a dozen writers collide. This was found by running a real connection, not by a test.
 
 ---
 
@@ -271,8 +337,8 @@ Only the ones that genuinely cannot be decided from the code.
 
 1. **Telecom provider.** Which operator or MVNO is the target for the first real Data Pool adapter, and is there a commercial agreement in place? The Demo Provider covers development, but a real adapter needs credentials and an API contract. **This is the one item that cannot be finished in code.**
 2. **SMTP provider for production.** Codes must be delivered reliably by a real service. Which one, and who holds the credentials?
-3. **TURN infrastructure.** Phase 6 needs a TURN server for the sessions that cannot connect directly. Self-hosted coturn or a managed provider is a cost and operations decision.
+3. **TURN infrastructure.** Remote desktop needs a TURN server for the sessions that cannot connect directly — which is most of them behind mobile or carrier-grade NAT. Self-hosted coturn or a managed provider is a cost and operations decision; the code is ready for either.
 4. **Code-signing certificate.** Windows installers need an EV or OV certificate for Phase 7. Purchasing and custody are yours to decide.
 5. **Hosting.** Where the control plane runs determines the TLS proxy, backup strategy and how coarse location is derived.
 
-None of these block Phase 6, which is where I would go next.
+None of these block Phase 7, which is where I would go next.

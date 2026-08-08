@@ -29,6 +29,22 @@ const configSchema = z
      */
     POWER_SIGNING_KEY: z.string().optional(),
 
+    /**
+     * ICE configuration for remote desktop.
+     *
+     * STUN only tells a peer its own public address; it carries no media and
+     * sees no traffic. TURN does relay media, so its credentials are minted
+     * per session and expire in minutes — `TURN_SECRET` is the shared secret a
+     * coturn server is started with (`static-auth-secret`), never a password
+     * handed to a client.
+     *
+     * Both are comma-separated so a deployment can list several.
+     */
+    STUN_URLS: z.string().default(''),
+    TURN_URLS: z.string().default(''),
+    TURN_SECRET: z.string().optional(),
+    TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().int().positive().max(3600).default(300),
+
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
     UNTRUSTED_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(1),
 
@@ -68,6 +84,14 @@ const configSchema = z
       .transform((v) => v === 'true'),
   })
   .superRefine((cfg, ctx) => {
+    if (cfg.TURN_URLS.trim() && !cfg.TURN_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['TURN_SECRET'],
+        message:
+          'TURN_SECRET is required when TURN_URLS is set — without it no usable credential can be minted',
+      });
+    }
     if (cfg.MAIL_TRANSPORT === 'smtp' && !cfg.SMTP_HOST) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

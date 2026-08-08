@@ -28,6 +28,7 @@ import (
 	"github.com/netlink/agent/internal/printers"
 	"github.com/netlink/agent/pkg/command"
 	"github.com/netlink/agent/pkg/identity"
+	"github.com/netlink/agent/pkg/remotegrant"
 	"github.com/netlink/agent/pkg/wol"
 )
 
@@ -62,6 +63,11 @@ type Agent struct {
 	// and reused for the life of the process.
 	powerExec     power.Executor
 	powerVerifier *command.Verifier
+
+	// Remote desktop. The grant verifier owns its own replay guard, and the
+	// session map keeps a grant collected twice from starting two connections.
+	remoteVerifier *remotegrant.Verifier
+	remoteSessions *sessions
 }
 
 // New prepares an Agent, creating this installation's identity if it has none.
@@ -98,6 +104,7 @@ func New(cfg Config) (*Agent, error) {
 	}
 
 	agent.powerExec = power.New()
+	agent.remoteSessions = newSessions()
 
 	// A previous run may already have joined a Space.
 	if existing, err := agent.enrollment.Load(); err == nil {
@@ -151,6 +158,7 @@ func (a *Agent) Enroll(ctx context.Context, token string) (*enrollment.Enrollmen
 
 	record := enrollment.Enrollment{
 		DeviceID:   resp.DeviceID,
+		AgentID:    resp.AgentID,
 		SpaceID:    resp.SpaceID,
 		SpaceName:  resp.SpaceName,
 		EnrolledAt: time.Now().UTC(),
@@ -201,6 +209,12 @@ func (a *Agent) Run(ctx context.Context) error {
 	powerTicker := time.NewTicker(3 * time.Second)
 	defer powerTicker.Stop()
 
+	// Remote sessions are polled on the same cadence: a person who pressed
+	// Connect is watching a spinner, and three seconds is already the slowest
+	// part of establishing the connection.
+	remoteTicker := time.NewTicker(3 * time.Second)
+	defer remoteTicker.Stop()
+
 	// Resources are reported far less often — printers and approved folders
 	// change on a human timescale, not a 30-second one.
 	resourceTicker := time.NewTicker(15 * time.Minute)
@@ -213,11 +227,17 @@ func (a *Agent) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			a.log.Info("NetLink agent stopping")
+			// A peer connection outlives an HTTP request, so shutting down has
+			// to reach it explicitly — otherwise stopping the service would
+			// leave a screen being streamed.
+			a.remoteSessions.closeAll()
 			return nil
 		case <-ticker.C:
 			a.beat(ctx)
 		case <-powerTicker.C:
 			a.pollPower(ctx)
+		case <-remoteTicker.C:
+			a.pollRemote(ctx)
 		case <-resourceTicker.C:
 			a.reportResources(ctx)
 		}
@@ -250,13 +270,22 @@ func (a *Agent) loadSigningKey(ctx context.Context) {
 		return
 	}
 
+	trusted := map[string]ed25519.PublicKey{key.KeyID: ed25519.PublicKey(raw)}
+
 	a.mu.Lock()
-	a.powerVerifier = command.NewVerifier(current.DeviceID, map[string]ed25519.PublicKey{
-		key.KeyID: ed25519.PublicKey(raw),
-	})
+	a.powerVerifier = command.NewVerifier(current.DeviceID, trusted)
+	// Session grants are signed with the same key and separated by the domain
+	// string at the head of their signing input, so one fetch covers both.
+	// They keep separate replay guards: a nonce spent on a power command must
+	// not make a session grant look replayed, or the reverse.
+	a.remoteVerifier = remotegrant.NewVerifier(
+		current.AgentID,
+		trusted,
+		command.NewMemoryNonceStore(),
+	)
 	a.mu.Unlock()
 
-	a.log.Info("command signing key loaded", "keyId", key.KeyID)
+	a.log.Info("control plane signing key loaded", "keyId", key.KeyID)
 }
 
 // pollPower collects, verifies and carries out any waiting command.
@@ -404,6 +433,25 @@ func (a *Agent) beat(ctx context.Context) {
 
 	if resp.Revoked {
 		a.forgetIdentity("this device was revoked by its owner")
+		return
+	}
+
+	// An installation enrolled before the control plane returned an agent id
+	// learns it here rather than needing to be re-enrolled. Without it, remote
+	// session grants addressed to this computer would never match.
+	if resp.AgentID != "" && resp.AgentID != current.AgentID {
+		updated := *current
+		updated.AgentID = resp.AgentID
+		if err := a.enrollment.Save(updated); err != nil {
+			a.log.Warn("could not record the agent id", "error", err)
+			return
+		}
+		a.mu.Lock()
+		a.current = &updated
+		// The verifier is bound to the agent id, so it has to be rebuilt.
+		a.remoteVerifier = nil
+		a.mu.Unlock()
+		a.loadSigningKey(ctx)
 	}
 }
 

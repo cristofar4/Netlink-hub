@@ -46,6 +46,8 @@ export const AUDIT_ACTIONS = [
   'printer.job.result',
   'remote.session.started',
   'remote.session.ended',
+  'remote.session.denied',
+  'remote.input.refused',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -118,4 +120,6 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'printer.job.result': 'Print job result',
   'remote.session.started': 'Started a remote session',
   'remote.session.ended': 'Ended a remote session',
+  'remote.session.denied': 'Blocked a remote session',
+  'remote.input.refused': 'Refused input on a view-only session',
 };

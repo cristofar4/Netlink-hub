@@ -20,7 +20,13 @@ import (
 var ErrNotEnrolled = errors.New("netlink: this installation has not been enrolled into a Space")
 
 type Enrollment struct {
-	DeviceID   string    `json:"deviceId"`
+	DeviceID string `json:"deviceId"`
+	// AgentID is the control plane's id for this computer *as an agent*, which
+	// is what a remote session grant is addressed to. Distinct from DeviceID:
+	// one identifies the installation, the other identifies its membership of a
+	// Space. Refreshed on every heartbeat so an installation enrolled before
+	// this field existed picks it up without re-enrolling.
+	AgentID    string    `json:"agentId,omitempty"`
 	SpaceID    string    `json:"spaceId"`
 	SpaceName  string    `json:"spaceName"`
 	EnrolledAt time.Time `json:"enrolledAt"`

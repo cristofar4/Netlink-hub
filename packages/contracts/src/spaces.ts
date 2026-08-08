@@ -96,6 +96,14 @@ export type AgentEnrollRequest = z.infer<typeof agentEnrollRequestSchema>;
 
 export type AgentEnrollResponse = {
   deviceId: string;
+  /**
+   * The agent's own id, distinct from the device's.
+   *
+   * One identifies the installation, the other identifies its membership of a
+   * Space. Remote session grants are addressed to this one, and an agent that
+   * does not know it cannot recognise a grant meant for it.
+   */
+  agentId: string;
   spaceId: string;
   /** Echoed so the agent can confirm it enrolled where it expected to. */
   spaceName: string;
@@ -125,8 +133,14 @@ export type AgentHeartbeatResponse = {
   /** True once the owner has revoked this device; the agent then forgets its identity. */
   revoked: boolean;
   message?: string;
+  /**
+   * Repeated on every beat, not only at enrollment, so an installation that
+   * enrolled before this field existed learns its agent id without anyone
+   * having to re-enrol it.
+   */
+  agentId?: string;
   heartbeatIntervalSeconds: number;
-  /** Signed commands waiting for this agent. Empty until Phase 4. */
+  /** Signed commands waiting for this agent. */
   pendingCommands: unknown[];
 };
 
@@ -164,6 +178,21 @@ export type LiveEvent =
       agentId: string;
       commandId: string;
       succeeded: boolean;
+    }
+  | {
+      type: 'remote.signal';
+      spaceId: string;
+      sessionId: string;
+      /** Which side wrote it, so a peer ignores the echo of its own message. */
+      from: 'viewer' | 'host';
+      seq: number;
+    }
+  | {
+      type: 'remote.session';
+      spaceId: string;
+      sessionId: string;
+      agentId: string;
+      state: 'pending' | 'connecting' | 'active' | 'ended';
     }
   | { type: 'ping'; at: string };
 
