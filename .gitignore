@@ -40,3 +40,8 @@ tmp/
 .DS_Store
 Thumbs.db
 *.log
+
+# Expo / React Native
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
