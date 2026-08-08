@@ -198,15 +198,7 @@ export const DETAIL_SECTIONS: NavSection[] = [
     id: 'power',
     label: 'Device Power and Wake',
     description: 'Turn on, restart, lock or shut down a computer',
-    phase: 4,
-    placeholder:
-      'Waking a computer that is switched off needs another computer already online on the same network to send the magic packet. NetLink checks every precondition before it offers the button.',
-    capabilities: [
-      'Wake Helper selection and Wake-on-LAN readiness checks',
-      'Turn On, Restart, Shut Down, Lock and Sleep',
-      'A ten-second countdown you can cancel',
-      'Every command signed, replay-protected and audited',
-    ],
+    phase: 1,
     icon: null,
   },
   {

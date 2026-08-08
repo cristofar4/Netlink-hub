@@ -1,10 +1,14 @@
 import type {
+  AgentPowerState,
   AgentSummary,
   CreatePassRequest,
   DataPoolSummary,
   MemberAccessRow,
   MyAllocation,
   PassSummary,
+  PowerAction,
+  PowerCommandRequest,
+  PowerCommandSummary,
   UpdateAllocationRequest,
   AuthSuccessResponse,
   AuthenticatedDevice,
@@ -250,6 +254,46 @@ export class NetLinkApi {
 
   claimPass(token: string): Promise<{ spaceId: string; spaceName: string; permissions: string[] }> {
     return this.request('POST', '/passes/claim', { body: { token } });
+  }
+
+  // -------------------------------------------------------------------------
+  // Power
+  // -------------------------------------------------------------------------
+
+  powerState(spaceId: string): Promise<AgentPowerState[]> {
+    return this.request('GET', `/spaces/${spaceId}/power`);
+  }
+
+  powerHistory(spaceId: string, limit = 25): Promise<PowerCommandSummary[]> {
+    return this.request('GET', `/spaces/${spaceId}/power/commands?limit=${limit}`);
+  }
+
+  requestPowerStepUp(spaceId: string, action: PowerAction): Promise<ChallengeResponse> {
+    return this.request('POST', `/spaces/${spaceId}/power/step-up`, { body: { action } });
+  }
+
+  requestPowerCommand(spaceId: string, body: PowerCommandRequest): Promise<PowerCommandSummary> {
+    return this.request('POST', `/spaces/${spaceId}/power/commands`, { body });
+  }
+
+  setWakeHelper(
+    spaceId: string,
+    agentId: string,
+    isWakeHelper: boolean,
+  ): Promise<{ agentId: string; isWakeHelper: boolean }> {
+    return this.request('PUT', `/spaces/${spaceId}/power/agents/${agentId}/wake-helper`, {
+      body: { isWakeHelper },
+    });
+  }
+
+  registerMac(
+    spaceId: string,
+    agentId: string,
+    macAddress: string,
+  ): Promise<{ agentId: string; macAddress: string }> {
+    return this.request('PUT', `/spaces/${spaceId}/power/agents/${agentId}/mac`, {
+      body: { macAddress },
+    });
   }
 
   /** The URL the live-updates socket connects to, with the current token. */

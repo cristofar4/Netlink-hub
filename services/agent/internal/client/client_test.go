@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -213,21 +214,46 @@ func TestEnrollNeverSendsThePrivateKey(t *testing.T) {
 	}
 }
 
+func TestRejectionIsDistinguishableFromAFailure(t *testing.T) {
+	ident := newIdentity(t)
+
+	// A 401 or 403 means this identity is no longer welcome. The agent must be
+	// able to tell that apart from a transient failure, because the right
+	// response is to forget its identity rather than keep retrying.
+	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(status)
+			_, _ = w.Write([]byte(`{"message":"device revoked"}`))
+		}))
+
+		c := New(Options{BaseURL: server.URL, Identity: ident})
+		_, err := c.Heartbeat(context.Background(), HeartbeatRequest{Status: "online"})
+		server.Close()
+
+		if !errors.Is(err, ErrRejected) {
+			t.Errorf("status %d: err = %v, want ErrRejected", status, err)
+		}
+	}
+}
+
 func TestServerErrorIsReported(t *testing.T) {
 	ident := newIdentity(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-		_, _ = w.Write([]byte(`{"message":"device revoked"}`))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message":"boom"}`))
 	}))
 	defer server.Close()
 
 	c := New(Options{BaseURL: server.URL, Identity: ident})
 	_, err := c.Heartbeat(context.Background(), HeartbeatRequest{Status: "online"})
 	if err == nil {
-		t.Fatal("a 403 was treated as success")
+		t.Fatal("a 500 was treated as success")
 	}
-	if !strings.Contains(err.Error(), "403") {
+	if errors.Is(err, ErrRejected) {
+		t.Error("a server fault was mistaken for a rejection; the agent would wrongly forget its identity")
+	}
+	if !strings.Contains(err.Error(), "500") {
 		t.Errorf("error does not mention the status: %v", err)
 	}
 }

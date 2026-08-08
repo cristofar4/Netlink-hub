@@ -22,6 +22,13 @@ const configSchema = z
     JWT_ISSUER: z.string().default('netlink'),
     JWT_AUDIENCE: z.string().default('netlink-client'),
 
+    /**
+     * Ed25519 seed (32 bytes, base64url) used to sign power commands.
+     * Without it a fresh key is generated at boot, which is fine locally and
+     * refused in production.
+     */
+    POWER_SIGNING_KEY: z.string().optional(),
+
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
     UNTRUSTED_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(1),
 
@@ -74,6 +81,14 @@ const configSchema = z
           code: z.ZodIssueCode.custom,
           path: ['EXPOSE_DEV_OTP'],
           message: 'EXPOSE_DEV_OTP must be false in production',
+        });
+      }
+      if (!cfg.POWER_SIGNING_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['POWER_SIGNING_KEY'],
+          message:
+            'POWER_SIGNING_KEY is required in production — an ephemeral key would invalidate every power command on restart',
         });
       }
       if (cfg.MAIL_TRANSPORT !== 'smtp') {

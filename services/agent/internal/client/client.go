@@ -169,6 +169,71 @@ func (c *Client) ReportResources(ctx context.Context, report ResourceReport) err
 	return c.postSigned(ctx, "/agent/resources", report, nil)
 }
 
+// SigningKey is the control plane's public key for power commands.
+type SigningKey struct {
+	KeyID     string `json:"keyId"`
+	PublicKey string `json:"publicKey"`
+	Algorithm string `json:"algorithm"`
+}
+
+// FetchSigningKey retrieves the key power commands are verified against.
+//
+// Unauthenticated by design: it verifies signatures and cannot create them, and
+// the agent needs it before it can trust anything else.
+func (c *Client) FetchSigningKey(ctx context.Context) (*SigningKey, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/agent/power/signing-key", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("netlink: fetching the command signing key: %w", err)
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("netlink: signing key returned %s", resp.Status)
+	}
+
+	var key SigningKey
+	if err := json.Unmarshal(raw, &key); err != nil {
+		return nil, fmt.Errorf("netlink: decoding the signing key: %w", err)
+	}
+	return &key, nil
+}
+
+// PowerTarget tells the agent which machine a command concerns.
+type PowerTarget struct {
+	MACAddress  string `json:"macAddress,omitempty"`
+	BroadcastIP string `json:"broadcastIp,omitempty"`
+}
+
+// CollectPowerCommands fetches signed commands waiting for this machine.
+func (c *Client) CollectPowerCommands(ctx context.Context) ([]json.RawMessage, error) {
+	var out []json.RawMessage
+	if err := c.postSigned(ctx, "/agent/power/collect", map[string]string{}, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PowerResultReport is what the agent posts after acting.
+type PowerResultReport struct {
+	DeviceID  string `json:"deviceId"`
+	CommandID string `json:"commandId"`
+	Succeeded bool   `json:"succeeded"`
+	Detail    string `json:"detail,omitempty"`
+}
+
+// ReportPowerResult records what actually happened.
+func (c *Client) ReportPowerResult(ctx context.Context, report PowerResultReport) error {
+	return c.postSigned(ctx, "/agent/power/result", report, nil)
+}
+
 // Enroll registers this installation.
 func (c *Client) Enroll(ctx context.Context, req EnrollRequest) (*EnrollResponse, error) {
 	var out EnrollResponse

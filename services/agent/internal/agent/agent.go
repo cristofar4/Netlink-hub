@@ -18,9 +18,15 @@ import (
 	"sync"
 	"time"
 
+	"crypto/ed25519"
+	"encoding/base64"
+	"encoding/json"
+
 	"github.com/netlink/agent/internal/client"
 	"github.com/netlink/agent/internal/enrollment"
+	"github.com/netlink/agent/internal/power"
 	"github.com/netlink/agent/internal/printers"
+	"github.com/netlink/agent/pkg/command"
 	"github.com/netlink/agent/pkg/identity"
 	"github.com/netlink/agent/pkg/wol"
 )
@@ -51,6 +57,11 @@ type Agent struct {
 
 	mu      sync.Mutex
 	current *enrollment.Enrollment
+
+	// Power commands. The verifier owns the replay guard, so it is created once
+	// and reused for the life of the process.
+	powerExec     power.Executor
+	powerVerifier *command.Verifier
 }
 
 // New prepares an Agent, creating this installation's identity if it has none.
@@ -85,6 +96,8 @@ func New(cfg Config) (*Agent, error) {
 			AppVersion: cfg.AppVersion,
 		}),
 	}
+
+	agent.powerExec = power.New()
 
 	// A previous run may already have joined a Space.
 	if existing, err := agent.enrollment.Load(); err == nil {
@@ -178,11 +191,18 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 	}
 
+	a.loadSigningKey(ctx)
+
 	ticker := time.NewTicker(a.cfg.HeartbeatEvery)
 	defer ticker.Stop()
 
-	// Resources are reported far less often than the heartbeat — printers and
-	// approved folders change on a human timescale, not a 30-second one.
+	// Power is polled faster than the heartbeat: a person who presses Shut Down
+	// should not wait most of a heartbeat interval for anything to happen.
+	powerTicker := time.NewTicker(3 * time.Second)
+	defer powerTicker.Stop()
+
+	// Resources are reported far less often — printers and approved folders
+	// change on a human timescale, not a 30-second one.
 	resourceTicker := time.NewTicker(15 * time.Minute)
 	defer resourceTicker.Stop()
 
@@ -196,10 +216,157 @@ func (a *Agent) Run(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			a.beat(ctx)
+		case <-powerTicker.C:
+			a.pollPower(ctx)
 		case <-resourceTicker.C:
 			a.reportResources(ctx)
 		}
 	}
+}
+
+// loadSigningKey fetches the key power commands are verified against.
+//
+// Without it the agent runs normally but refuses every command, which is the
+// correct failure: accepting an unverifiable shutdown would be far worse than
+// declining to shut down.
+func (a *Agent) loadSigningKey(ctx context.Context) {
+	current := a.Enrollment()
+	if current == nil {
+		return
+	}
+
+	fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	key, err := a.client.FetchSigningKey(fetchCtx)
+	if err != nil {
+		a.log.Warn("could not fetch the command signing key; power commands will be refused", "error", err)
+		return
+	}
+
+	raw, err := base64.RawURLEncoding.DecodeString(key.PublicKey)
+	if err != nil || len(raw) != ed25519.PublicKeySize {
+		a.log.Error("the command signing key is malformed; power commands will be refused")
+		return
+	}
+
+	a.mu.Lock()
+	a.powerVerifier = command.NewVerifier(current.DeviceID, map[string]ed25519.PublicKey{
+		key.KeyID: ed25519.PublicKey(raw),
+	})
+	a.mu.Unlock()
+
+	a.log.Info("command signing key loaded", "keyId", key.KeyID)
+}
+
+// pollPower collects, verifies and carries out any waiting command.
+func (a *Agent) pollPower(ctx context.Context) {
+	current := a.Enrollment()
+	if current == nil {
+		return
+	}
+
+	a.mu.Lock()
+	verifier := a.powerVerifier
+	a.mu.Unlock()
+
+	if verifier == nil {
+		// Retry the key rather than give up; the control plane may have been
+		// unreachable at startup.
+		a.loadSigningKey(ctx)
+		return
+	}
+
+	pollCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	envelopes, err := a.client.CollectPowerCommands(pollCtx)
+	if err != nil {
+		if errors.Is(err, client.ErrRejected) {
+			a.forgetIdentity("the control plane rejected this device")
+		}
+		return
+	}
+
+	for _, raw := range envelopes {
+		a.handlePowerCommand(ctx, verifier, raw)
+	}
+}
+
+func (a *Agent) handlePowerCommand(ctx context.Context, verifier *command.Verifier, raw json.RawMessage) {
+	envelope, err := command.UnmarshalEnvelope(raw)
+	if err != nil {
+		a.log.Warn("discarding a malformed power command", "error", err)
+		return
+	}
+
+	verified, err := verifier.Verify(envelope)
+	if err != nil {
+		// Every rejection reason is distinct and worth seeing: a signature
+		// failure and a replay mean very different things.
+		a.log.Warn("refusing a power command", "commandId", envelope.Command.ID, "reason", err)
+		a.reportPower(ctx, envelope.Command.ID, false, "refused: "+err.Error())
+		return
+	}
+
+	a.log.Info("carrying out a power command", "action", verified.Action, "commandId", verified.ID)
+
+	detail, execErr := a.powerExec.Execute(ctx, verified.Action, a.powerTarget())
+	if execErr != nil {
+		a.log.Error("power command failed", "action", verified.Action, "error", execErr)
+		a.reportPower(ctx, verified.ID, false, execErr.Error())
+		return
+	}
+
+	// Reported before the machine acts on a restart or shutdown, because after
+	// it does there is no process left to report anything.
+	a.reportPower(ctx, verified.ID, true, detail)
+}
+
+// powerTarget describes what a wake should aim at.
+//
+// The control plane decides *which* machine to wake and delivers the command to
+// this one as the helper; the address comes from what this machine can see of
+// its own network, so the broadcast lands on the right subnet.
+func (a *Agent) powerTarget() power.Target {
+	localIP, mac := primaryInterface()
+	return power.Target{
+		MACAddress:  mac,
+		BroadcastIP: broadcastFor(localIP),
+	}
+}
+
+func (a *Agent) reportPower(ctx context.Context, commandID string, succeeded bool, detail string) {
+	current := a.Enrollment()
+	if current == nil {
+		return
+	}
+
+	reportCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := a.client.ReportPowerResult(reportCtx, client.PowerResultReport{
+		DeviceID:  current.DeviceID,
+		CommandID: commandID,
+		Succeeded: succeeded,
+		Detail:    detail,
+	}); err != nil {
+		a.log.Warn("could not report the power result", "error", err)
+	}
+}
+
+// broadcastFor returns the /24 broadcast address for a local IPv4 address.
+//
+// A magic packet has to be broadcast because a powered-off machine has no ARP
+// entry to unicast to. /24 is the near-universal home and small-office subnet;
+// anything else falls back to the global broadcast, which routers drop but
+// which is still the right thing to attempt.
+func broadcastFor(ip string) string {
+	parts := strings.Split(ip, ".")
+	if len(parts) != 4 {
+		return "255.255.255.255"
+	}
+	return strings.Join([]string{parts[0], parts[1], parts[2], "255"}, ".")
 }
 
 func (a *Agent) beat(ctx context.Context) {

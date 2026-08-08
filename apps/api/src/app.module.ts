@@ -10,6 +10,7 @@ import { DevicesModule } from './devices/devices.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { AgentsModule } from './agents/agents.module';
 import { DataModule } from './data/data.module';
+import { PowerModule } from './power/power.module';
 import { LiveModule } from './live/live.module';
 import { HealthModule } from './health/health.module';
 import { AccessTokenGuard } from './auth/access-token.guard';
@@ -30,6 +31,7 @@ import { AccessTokenGuard } from './auth/access-token.guard';
     DevicesModule,
     AgentsModule,
     DataModule,
+    PowerModule,
     HealthModule,
   ],
   providers: [

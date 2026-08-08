@@ -3,5 +3,6 @@ export * from './auth';
 export * from './audit';
 export * from './spaces';
 export * from './data';
+export * from './power';
 export * from './connection';
 export * from './health';

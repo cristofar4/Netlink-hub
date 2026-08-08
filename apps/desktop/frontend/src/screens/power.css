@@ -1,0 +1,147 @@
+.power__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nl-space-4);
+  margin-top: var(--nl-space-5);
+}
+
+.power__action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 220px;
+}
+
+/* Why a button is unavailable, in words. A greyed-out control with no reason
+ * is a dead end. */
+.power__reason {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  line-height: 1.4;
+}
+
+.power__pending {
+  margin-top: var(--nl-space-5);
+  padding: var(--nl-space-4);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border-strong);
+  background: var(--nl-surface-sunken);
+}
+
+.power__pending--counting {
+  border-color: rgba(244, 63, 94, 0.45);
+  background: var(--nl-danger-soft);
+}
+
+.power__countdown {
+  font-family: var(--nl-font-mono);
+  font-size: var(--nl-text-lg);
+  font-weight: 700;
+  color: var(--nl-danger);
+}
+
+.power__countdown-track {
+  margin-top: var(--nl-space-3);
+  height: 4px;
+  border-radius: var(--nl-radius-pill);
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.power__countdown-fill {
+  height: 100%;
+  background: var(--nl-danger);
+  /* Linear, and short: the bar should track the seconds honestly rather than
+   * easing to a stop after the command has already gone. */
+  transition: width 250ms linear;
+}
+
+.power__stepup {
+  margin-top: var(--nl-space-5);
+  padding: var(--nl-space-5);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border-strong);
+  background: var(--nl-surface-sunken);
+}
+
+.power__readiness {
+  margin-top: var(--nl-space-5);
+  padding: var(--nl-space-4);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+}
+
+.power__checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--nl-space-2);
+}
+
+.power__check-item {
+  position: relative;
+  padding-left: 22px;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+}
+
+.power__check-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.power__check-item--ok::before {
+  background: var(--nl-success);
+}
+
+.power__check-item--missing::before {
+  background: var(--nl-warning);
+}
+
+/* Undetectable, not failed — a hollow dot rather than an amber one, because
+ * "we cannot tell" is a different statement from "this is wrong". */
+.power__check-item--unknown::before {
+  border: 1px solid var(--nl-text-muted);
+}
+
+.power__helper {
+  margin-top: var(--nl-space-5);
+  padding-top: var(--nl-space-4);
+  border-top: 1px solid var(--nl-border);
+}
+
+.power__check {
+  display: flex;
+  gap: var(--nl-space-3);
+  align-items: flex-start;
+  font-size: var(--nl-text-sm);
+  cursor: pointer;
+}
+
+.power__check input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--nl-primary);
+  flex-shrink: 0;
+}
+
+.power__check > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.power__hint {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  line-height: 1.5;
+}

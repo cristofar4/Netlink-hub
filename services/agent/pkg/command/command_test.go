@@ -440,3 +440,51 @@ func TestSortedActionsIsStable(t *testing.T) {
 		}
 	}
 }
+
+// -----------------------------------------------------------------------------
+// Cross-implementation format
+// -----------------------------------------------------------------------------
+
+func TestSigningInputFormatIsPinned(t *testing.T) {
+	// The control plane builds this exact string in TypeScript. If either side
+	// changes, every power command stops verifying — so the expected bytes are
+	// written out in full rather than derived.
+	c := Command{
+		ID:          "cmd-1",
+		Action:      ActionShutdown,
+		DeviceID:    "device-1",
+		SpaceID:     "space-1",
+		IssuedAt:    time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC),
+		ExpiresAt:   time.Date(2026, 8, 8, 12, 2, 0, 0, time.UTC),
+		Nonce:       "nonce-1",
+		RequestedBy: "user-1",
+	}
+
+	want := "netlink.power.v1\n" +
+		"cmd-1\n" +
+		"power.shutdown\n" +
+		"device-1\n" +
+		"space-1\n" +
+		"2026-08-08T12:00:00.000Z\n" +
+		"2026-08-08T12:02:00.000Z\n" +
+		"nonce-1\n" +
+		"user-1"
+
+	if got := string(SigningInput(c)); got != want {
+		t.Errorf("signing input drifted:\n got: %q\nwant: %q", got, want)
+	}
+}
+
+func TestTimestampsAlwaysCarryThreeDecimalPlaces(t *testing.T) {
+	// RFC3339Nano would render this as "12:00:00Z"; JavaScript's toISOString
+	// renders "12:00:00.000Z". The pinned layout has to match JavaScript.
+	whole := time.Date(2026, 8, 8, 12, 0, 0, 0, time.UTC)
+	if got := whole.UTC().Format(TimestampLayout); got != "2026-08-08T12:00:00.000Z" {
+		t.Errorf("whole second formatted as %q", got)
+	}
+
+	fractional := time.Date(2026, 8, 8, 12, 0, 0, 123_000_000, time.UTC)
+	if got := fractional.UTC().Format(TimestampLayout); got != "2026-08-08T12:00:00.123Z" {
+		t.Errorf("fractional second formatted as %q", got)
+	}
+}

@@ -5,6 +5,7 @@ import { ALL_SECTIONS, NAV_SECTIONS, type SectionId } from './sections';
 import { SpacesScreen } from './SpacesScreen';
 import { DataPoolScreen } from './DataPoolScreen';
 import { MemberAccessScreen } from './MemberAccessScreen';
+import { PowerScreen } from './PowerScreen';
 import { SpaceProvider, useSpaces } from '../state/space';
 import { DevicesScreen } from './DevicesScreen';
 import { ActivityScreen } from './ActivityScreen';
@@ -122,6 +123,8 @@ function SectionContent({
       return <DataPoolScreen space={activeSpace} />;
     case 'members':
       return <MemberAccessScreen space={activeSpace} />;
+    case 'power':
+      return <PowerScreen space={activeSpace} />;
     case 'devices':
       return <DevicesScreen />;
     case 'activity':

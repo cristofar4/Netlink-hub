@@ -179,6 +179,7 @@ model Space {
   resources   Resource[]
   enrollmentTokens AgentEnrollmentToken[]
   dataPool    DataPool?
+  powerCommands PowerCommand[]
 
   @@index([ownerId])
   @@map("spaces")
@@ -237,6 +238,8 @@ model Agent {
   updatedAt     DateTime    @updatedAt
 
   resources Resource[]
+  powerCommandsAsTarget PowerCommand[] @relation("PowerTarget")
+  powerCommandsAsHelper PowerCommand[] @relation("PowerHelper")
 
   @@index([spaceId])
   @@map("agents")
@@ -463,4 +466,60 @@ model DataUsageEvent {
 
   @@index([allocationId, occurredAt])
   @@map("data_usage_events")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4 — power commands
+// ---------------------------------------------------------------------------
+
+enum PowerCommandState {
+  pending
+  countdown
+  sent
+  acknowledged
+  succeeded
+  failed
+  cancelled
+  expired
+}
+
+/// One signed power command.
+///
+/// The signature itself is not stored — it is derived from the signing key on
+/// delivery, so a database read cannot yield a usable command. What is stored
+/// is the record of what was asked for, by whom, and what happened.
+model PowerCommand {
+  id        String            @id @default(uuid())
+  spaceId   String
+  space     Space             @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  /// The computer the command is for.
+  targetAgentId String
+  targetAgent   Agent         @relation("PowerTarget", fields: [targetAgentId], references: [id], onDelete: Cascade)
+  /// For a wake, the computer asked to send the magic packet. Null otherwise.
+  helperAgentId String?
+  helperAgent   Agent?        @relation("PowerHelper", fields: [helperAgentId], references: [id], onDelete: SetNull)
+
+  action        String
+  state         PowerCommandState @default(pending)
+  requestedById String
+  requestedByDeviceId String?
+
+  nonce     String   @unique
+  issuedAt  DateTime @default(now())
+  expiresAt DateTime
+  /// When the ten-second countdown ends and the command may actually be sent.
+  executeAt DateTime?
+
+  deliveredAt    DateTime?
+  acknowledgedAt DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+  detail         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([targetAgentId, state])
+  @@index([spaceId, createdAt])
+  @@map("power_commands")
 }

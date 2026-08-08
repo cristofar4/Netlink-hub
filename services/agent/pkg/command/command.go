@@ -90,6 +90,15 @@ type Envelope struct {
 	KeyID     string  `json:"keyId"`
 }
 
+// TimestampLayout is the exact timestamp format inside a signing input.
+//
+// Not RFC3339Nano: that strips trailing zeros, so 12:00:00.000 serialises as
+// "12:00:00Z" in Go while JavaScript's toISOString always emits three decimal
+// places. The control plane signs and the agent verifies, so the two must
+// agree byte for byte — which means pinning one explicit layout rather than
+// trusting two libraries to make the same choice.
+const TimestampLayout = "2006-01-02T15:04:05.000Z"
+
 // SigningInput is the exact byte sequence that gets signed.
 //
 // It is built field by field in a fixed order rather than by marshalling the
@@ -106,9 +115,9 @@ func SigningInput(c Command) []byte {
 	b.WriteString("\n")
 	b.WriteString(c.SpaceID)
 	b.WriteString("\n")
-	b.WriteString(c.IssuedAt.UTC().Format(time.RFC3339Nano))
+	b.WriteString(c.IssuedAt.UTC().Format(TimestampLayout))
 	b.WriteString("\n")
-	b.WriteString(c.ExpiresAt.UTC().Format(time.RFC3339Nano))
+	b.WriteString(c.ExpiresAt.UTC().Format(TimestampLayout))
 	b.WriteString("\n")
 	b.WriteString(c.Nonce)
 	b.WriteString("\n")
