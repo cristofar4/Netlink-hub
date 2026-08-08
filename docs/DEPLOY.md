@@ -1,5 +1,89 @@
 # Getting NetLink onto your phone
 
+## The fast way — see it in 10 minutes, no accounts, no APK
+
+If you just want NetLink running on your phone today, skip everything below.
+This needs **no Expo account, no Google account, no hosting, and no APK** — your
+phone runs the app straight from your PC over your own Wi-Fi.
+
+Your phone and your PC must be on the same Wi-Fi network.
+
+**1. On your phone:** install **Expo Go** from the Play Store.
+
+**2. On your Windows PC**, get NetLink running:
+
+```powershell
+git clone https://github.com/cristofar4/Netlink-hub.git
+cd Netlink-hub
+git checkout claude/beautiful-planck-pyfb3g
+.\scripts\setup-windows.ps1
+```
+
+**3. Let your phone reach the API.** By default it listens only on localhost,
+which your phone cannot see. In `.env`, change:
+
+```
+HOST=0.0.0.0
+```
+
+Find your PC's address on the network:
+
+```powershell
+ipconfig | Select-String IPv4
+```
+
+You want the one that looks like `192.168.x.x`.
+
+**4. Start the API and the desktop app:**
+
+```powershell
+.\scripts\dev-windows.ps1
+```
+
+Create your account in the NetLink window. The six-digit code appears in the API
+console — in development it is also returned in the response, so you never have
+to go hunting for it.
+
+**5. Point the phone app at your PC and start it:**
+
+```powershell
+cd apps\mobile
+$env:EXPO_PUBLIC_NETLINK_API_URL = "http://192.168.x.x:4000/api"   # your address
+npx expo start
+```
+
+A QR code appears in the terminal.
+
+**6. Open Expo Go on your phone and scan it.** NetLink loads. Sign in with the
+account you just made.
+
+To make the phone actually *do* something, enrol your PC's agent — in the
+NetLink window, **My Spaces → Add a computer**, then on the PC:
+
+```powershell
+cd services\agent
+go run .\cmd\netlink-agent run --token PASTE_TOKEN_HERE
+```
+
+Now **Power** on your phone can lock, sleep or restart that PC.
+
+### What this way is and is not
+
+It is real: real accounts, real device keys in the Android Keystore, real
+signed power commands, your real PC.
+
+It is **not** something to leave running. The connection is plain HTTP over your
+own network, which is acceptable while both machines are yours and on the same
+Wi-Fi, and is not acceptable for anything else. The Settings screen says so. It
+also stops working the moment you leave the house, because your phone can no
+longer see your PC.
+
+For a version that works anywhere, and for the Play Store, carry on below.
+
+---
+
+# The full way — a real deployment
+
 The shortest honest path from this repository to an app you can open on your own
 phone and use against your own computer.
 
@@ -12,6 +96,9 @@ none of them need a credit card.
 | 2 | The control plane, on the internet | 10 min | Free Render account |
 | 3 | The agent, on your Windows PC | 10 min | Your PC |
 | 4 | The Android app, on your phone | 20 min | Free Expo account |
+
+> The four steps below give you an APK that works from anywhere, on mobile data,
+> without your PC running the dev server. The fast way above is for a first look.
 
 ---
 

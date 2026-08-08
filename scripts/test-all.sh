@@ -91,6 +91,13 @@ check 'TypeScript — mobile' apps/mobile npx tsc -p tsconfig.json --noEmit
 check 'Contract tests' packages/contracts npx vitest run
 check 'Go tests (agent)' services/agent go test ./...
 check 'Frontend tests' apps/desktop/frontend npx vitest run
+check 'Mobile tests' apps/mobile npx vitest run
+
+# The Android bundle is the only thing that proves the mobile app would actually
+# build for release. A typecheck passes on code Hermes cannot compile — which is
+# exactly what happened once here, and cost an afternoon to notice.
+check 'Bundle the Android app' apps/mobile \
+  npx expo export --platform android --output-dir /tmp/netlink-expo-check
 
 if [ "$SKIP_INTEGRATION" -eq 1 ]; then
   check 'API unit tests' apps/api npm run test:unit

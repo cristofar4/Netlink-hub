@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AuthenticatedDevice } from '@netlink/contracts';
 import { Alert, Badge, Button, Card, Screen, StatusDot } from '../components/primitives';
 import { colors, fontSize, space } from '../theme/tokens';
-import { API_URL, BUILD_KIND } from '../lib/config';
+import { API_URL, BUILD_KIND, IS_INSECURE_TRANSPORT } from '../lib/config';
 import { ApiError } from '../lib/api';
 import { api, useSession } from '../state/session';
 
@@ -129,6 +129,15 @@ export function SettingsScreen() {
             <Badge tone={BUILD_KIND === 'release' ? 'neutral' : 'warning'}>{BUILD_KIND}</Badge>
           </View>
           <Text style={styles.about}>Connects to {API_URL}</Text>
+
+          {IS_INSECURE_TRANSPORT && (
+            <Alert tone="warning">
+              This build talks to its server over plain HTTP. That is fine while you are testing on
+              your own network, and not fine otherwise — sign-in codes and session tokens are
+              readable by anything on the same Wi-Fi. Point it at an https address before anyone
+              else uses it.
+            </Alert>
+          )}
           <Text style={styles.about}>
             NetLink never stores your password, your files, or anything on your screen. Files and
             remote sessions go directly between your own devices.
