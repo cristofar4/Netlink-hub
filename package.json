@@ -2,13 +2,14 @@
   "name": "netlink",
   "version": "0.1.0",
   "private": true,
-  "description": "NetLink — secure remote access to your home or office computers, files, printers and shared data.",
+  "description": "NetLink \u2014 secure remote access to your home or office computers, files, printers and shared data.",
   "license": "UNLICENSED",
   "workspaces": [
     "packages/contracts",
     "packages/ui",
     "apps/api",
-    "apps/desktop/frontend"
+    "apps/desktop/frontend",
+    "apps/mobile"
   ],
   "engines": {
     "node": ">=20.11.0",
@@ -30,7 +31,9 @@
     "db:generate": "npm run db:generate --workspace=@netlink/api",
     "db:migrate": "npm run db:migrate --workspace=@netlink/api",
     "db:seed": "npm run db:seed --workspace=@netlink/api",
-    "dev:api": "npm run dev --workspace=@netlink/api"
+    "dev:api": "npm run dev --workspace=@netlink/api",
+    "typecheck:mobile": "npm run typecheck --workspace=@netlink/mobile",
+    "test:mobile": "npm run test --workspace=@netlink/mobile"
   },
   "devDependencies": {
     "prettier": "3.6.2",
@@ -39,6 +42,10 @@
   "overrides": {
     "@nestjs/swagger": {
       "js-yaml": "5.2.3"
-    }
+    },
+    "tar": "7.5.22",
+    "@xmldom/xmldom": "0.8.13",
+    "postcss": "8.5.26",
+    "uuid": "11.1.1"
   }
 }

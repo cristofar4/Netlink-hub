@@ -1,0 +1,26 @@
+{
+  "cli": { "version": ">= 12.0.0", "appVersionSource": "remote" },
+  "build": {
+    "preview": {
+      "//": "Produces an APK you can download and install directly on a phone. This is the build to use for testing — no Play Store, no review, no wait.",
+      "android": { "buildType": "apk" },
+      "distribution": "internal",
+      "channel": "preview"
+    },
+    "production": {
+      "//": "Produces an AAB, which is the only format the Play Store accepts.",
+      "android": { "buildType": "app-bundle" },
+      "channel": "production",
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "//": "Starts in internal testing rather than going straight to production. A remote-access app that reaches somebody's home computer should be installed by you, on your own phone, before it is installed by anyone else.",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
+  }
+}

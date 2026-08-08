@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "NetLink",
+    "slug": "netlink",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "netlink",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#060b18",
+    "splash": {
+      "backgroundColor": "#060b18",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "com.netlink.app",
+      "versionCode": 1,
+      "adaptiveIcon": { "backgroundColor": "#060b18" },
+      "edgeToEdgeEnabled": true,
+      "permissions": ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_CONTACTS"
+      ]
+    },
+    "plugins": ["expo-secure-store"],
+    "extra": {
+      "netlinkApiUrl": "https://api.netlink.example.com/api"
+    }
+  }
+}
