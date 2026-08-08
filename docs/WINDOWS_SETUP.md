@@ -99,6 +99,16 @@ Once running:
 7. Click the **Computers** node on the map to see this device, rename it, or revoke it.
 8. Open **Activity** to see every one of those steps recorded.
 
+### Then connect a computer and use it
+
+9. On **My Spaces**, click **Add a computer**. You get a single-use enrollment token.
+10. Start the agent with it (see §5). Within a few seconds the map node turns green — that is a real heartbeat, not a placeholder. Stop the agent and it goes grey after 90 seconds.
+11. **Device Power and Wake** now lists that computer, with every wake precondition shown and each action saying why it cannot be pressed if it cannot. Lock is the safest one to try.
+12. **Files** — approve a folder, browse it, download something. Nothing outside the folder you approved is reachable, and the API refuses even a hand-crafted request that tries.
+13. **Printers** — share a printer the agent found, then print a PDF. The preview is your own browser's; the document does not leave the machine until you press Print.
+14. **Network Access** — press **Watch the screen**. A real WebRTC connection is established and you see the screen. Nothing you type or click is sent, and that is enforced on the computer being watched rather than by hiding buttons. **Take control** asks for a six-digit code first.
+15. **Data Pool** — connect the Demo Provider with any account reference of 6+ digits, then issue a Data-Only Pass. Sign in as that person on another machine and you will see an allowance and nothing else. Every number here is labelled **Demo Provider**, because it is.
+
 ---
 
 ## 5. The agent
@@ -147,6 +157,8 @@ The API integration tests need PostgreSQL running, because they exercise the rea
 
 ## 7. Building for release
 
+For a quick local build:
+
 ```powershell
 cd apps\desktop
 wails build -clean
@@ -156,11 +168,44 @@ cd ..\..\services\agent
 go build -ldflags "-s -w" -o bin\netlink-agent.exe .\cmd\netlink-agent
 ```
 
-Neither binary is code-signed yet. Signed installers and automatic updates are Phase 7.
+For a real release, use the script — it runs the whole gate first, then builds, signs and produces a signed update manifest:
+
+```powershell
+# Unsigned, for yourself. It will say loudly that it is unsigned.
+.\scripts\build-release.ps1 -Version 1.0.0 -BaseUrl https://releases.example.com
+
+# Signed, for other people.
+.\scripts\build-release.ps1 -Version 1.0.0 `
+    -CertificateThumbprint <your certificate thumbprint> `
+    -ReleaseKeyPath E:\keys\netlink-release.key `
+    -BaseUrl https://releases.example.com
+```
+
+Generate the release key once, and keep it offline:
+
+```powershell
+cd services\agent
+go run .\cmd\netlink-release keygen --out E:\keys\netlink-release.key
+```
+
+That key decides what code runs on every NetLink installation. Anything that can read it can ship anything to everyone.
+
+**Without a code-signing certificate the binaries are unsigned**, Windows SmartScreen will warn users, and the UAC prompt will say "Unknown publisher". The build script says so rather than pretending otherwise. Without a release key the manifest is unsigned, and no agent will apply the update — which is the correct behaviour, not a bug to work around.
 
 ---
 
-## 8. Troubleshooting
+## 8. Backups
+
+```powershell
+.\scripts\backup-windows.ps1 -Destination D:\netlink-backups
+.\scripts\restore-windows.ps1 -BackupFile D:\netlink-backups\netlink-20260808-020000.dump
+```
+
+Every backup is verified by restoring it into a throwaway database before it is kept. Schedule it with Task Scheduler, keep a copy somewhere the API server cannot write to, and encrypt it at rest — it holds every account and the whole audit trail, though no passwords, no file contents and no screen frames, because none of those are ever stored.
+
+---
+
+## 9. Troubleshooting
 
 **`wails: command not found`** — Go's bin directory is not on your `PATH`. See §1.
 
