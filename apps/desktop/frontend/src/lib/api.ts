@@ -1,5 +1,11 @@
 import type {
   AgentSummary,
+  CreatePassRequest,
+  DataPoolSummary,
+  MemberAccessRow,
+  MyAllocation,
+  PassSummary,
+  UpdateAllocationRequest,
   AuthSuccessResponse,
   AuthenticatedDevice,
   AuthenticatedUser,
@@ -188,6 +194,62 @@ export class NetLinkApi {
     spaceId: string,
   ): Promise<{ token: string; expiresAt: string; spaceId: string }> {
     return this.request('POST', `/spaces/${spaceId}/enrollment-token`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Data Pool
+  // -------------------------------------------------------------------------
+
+  connectDataPool(spaceId: string, accountRef: string): Promise<DataPoolSummary> {
+    return this.request('POST', `/spaces/${spaceId}/data/pool`, { body: { accountRef } });
+  }
+
+  dataPool(spaceId: string): Promise<DataPoolSummary> {
+    return this.request('GET', `/spaces/${spaceId}/data/pool`);
+  }
+
+  myAllocation(spaceId: string): Promise<MyAllocation> {
+    return this.request('GET', `/spaces/${spaceId}/data/mine`);
+  }
+
+  memberAccess(spaceId: string): Promise<MemberAccessRow[]> {
+    return this.request('GET', `/spaces/${spaceId}/data/members`);
+  }
+
+  pauseMemberData(spaceId: string, memberId: string, paused: boolean): Promise<{ status: string }> {
+    return this.request('PATCH', `/spaces/${spaceId}/data/members/${memberId}/pause`, {
+      body: { paused },
+    });
+  }
+
+  updateMemberAllocation(
+    spaceId: string,
+    memberId: string,
+    body: UpdateAllocationRequest,
+  ): Promise<{ updated: true }> {
+    return this.request('PATCH', `/spaces/${spaceId}/data/members/${memberId}/allocation`, {
+      body,
+    });
+  }
+
+  revokeMemberAccess(spaceId: string, memberId: string): Promise<{ revoked: true }> {
+    return this.request('DELETE', `/spaces/${spaceId}/data/members/${memberId}`);
+  }
+
+  createPass(spaceId: string, body: CreatePassRequest): Promise<PassSummary> {
+    return this.request('POST', `/spaces/${spaceId}/data/passes`, { body });
+  }
+
+  listPasses(spaceId: string): Promise<PassSummary[]> {
+    return this.request('GET', `/spaces/${spaceId}/data/passes`);
+  }
+
+  revokePass(spaceId: string, passId: string): Promise<{ revoked: true }> {
+    return this.request('DELETE', `/spaces/${spaceId}/data/passes/${passId}`);
+  }
+
+  claimPass(token: string): Promise<{ spaceId: string; spaceName: string; permissions: string[] }> {
+    return this.request('POST', '/passes/claim', { body: { token } });
   }
 
   /** The URL the live-updates socket connects to, with the current token. */

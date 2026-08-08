@@ -178,6 +178,7 @@ model Space {
   auditEvents AuditEvent[]
   resources   Resource[]
   enrollmentTokens AgentEnrollmentToken[]
+  dataPool    DataPool?
 
   @@index([ownerId])
   @@map("spaces")
@@ -203,6 +204,8 @@ model SpaceMember {
   expiresAt   DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  allocation DataAllocation?
 
   @@unique([spaceId, userId])
   @@index([spaceId])
@@ -370,4 +373,94 @@ model Resource {
   @@unique([agentId, kind, target])
   @@index([spaceId, kind])
   @@map("resources")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Data Pool
+// ---------------------------------------------------------------------------
+
+/// The Space's link to a telecom, ISP or MVNO account.
+///
+/// `provider` names the adapter. `demo` is the development fixture and is
+/// labelled as such everywhere it surfaces; a real provider is added by
+/// implementing the same adapter interface, not by changing this model.
+model DataPool {
+  id        String   @id @default(uuid())
+  spaceId   String   @unique
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  provider  String   @default("demo")
+  /// The account identifier at the provider (a mobile number, a subscriber id).
+  accountRef String
+  /// Whatever the adapter needs to describe the plan. Never a credential.
+  planName   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  allocations DataAllocation[]
+
+  @@map("data_pools")
+}
+
+enum AllocationStatus {
+  active
+  paused
+  expired
+  revoked
+}
+
+/// One person's share of the pool.
+///
+/// Byte counts are Decimal(20,0) rather than BigInt so a terabyte allocation
+/// and its usage arithmetic stay exact — a float would silently lose precision
+/// at exactly the scale that matters for billing.
+model DataAllocation {
+  id        String           @id @default(uuid())
+  poolId    String
+  pool      DataPool         @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  spaceId   String
+  memberId  String           @unique
+  member    SpaceMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status    AllocationStatus @default(active)
+
+  totalBytes    Decimal  @db.Decimal(20, 0)
+  dailyBytes    Decimal? @db.Decimal(20, 0)
+  usedBytes     Decimal  @default(0) @db.Decimal(20, 0)
+  usedTodayBytes Decimal @default(0) @db.Decimal(20, 0)
+  /// The day `usedTodayBytes` counts, so the daily figure resets on its own
+  /// rather than needing a scheduled job.
+  usageDay      DateTime?
+
+  expiresAt DateTime
+  /// Whether the holder may pass their allocation on. Off by default.
+  allowResharing Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pausedAt  DateTime?
+  revokedAt DateTime?
+
+  events DataUsageEvent[]
+
+  @@index([spaceId, status])
+  @@map("data_allocations")
+}
+
+/// A metered chunk of usage, as reported by the provider.
+///
+/// Records quantity, session time and which device — never a destination, a
+/// hostname or anything resembling browsing history.
+model DataUsageEvent {
+  id           String   @id @default(uuid())
+  allocationId String
+  allocation   DataAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  bytes        Decimal  @db.Decimal(20, 0)
+  sessionSeconds Int     @default(0)
+  deviceId     String?
+  /// Provider's own id for this record, so a replayed webhook is idempotent.
+  providerRef  String?  @unique
+  occurredAt   DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([allocationId, occurredAt])
+  @@map("data_usage_events")
 }

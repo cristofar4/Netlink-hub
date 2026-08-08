@@ -9,6 +9,7 @@ import type { DeviceIdentity } from '@netlink/contracts';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MAIL_TRANSPORT, MemoryMailTransport } from '../src/mail/mail.service';
+import { DemoDataProvider } from '../src/data/providers/demo.provider';
 
 /**
  * Integration tests run against a real PostgreSQL database and a real Nest
@@ -70,9 +71,12 @@ export async function createTestHarness(): Promise<TestHarness> {
     // Truncate rather than drop: far faster between tests, and it resets the
     // identity sequences too.
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE audit_events, refresh_tokens, challenges, request_nonces, agent_enrollment_tokens, resources, agents, space_members, invitations, spaces, devices, users RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE audit_events, refresh_tokens, challenges, request_nonces, agent_enrollment_tokens, resources, data_usage_events, data_allocations, data_pools, agents, space_members, invitations, spaces, devices, users RESTART IDENTITY CASCADE',
     );
     mail.clear();
+    // The demo provider keeps allocations and usage in memory, so it has to be
+    // reset alongside the database or usage would leak between tests.
+    app.get(DemoDataProvider).reset();
   };
 
   await reset();

@@ -3,6 +3,9 @@ import { Badge, StatusDot } from '@netlink/ui';
 import { useSession } from '../state/session';
 import { ALL_SECTIONS, NAV_SECTIONS, type SectionId } from './sections';
 import { SpacesScreen } from './SpacesScreen';
+import { DataPoolScreen } from './DataPoolScreen';
+import { MemberAccessScreen } from './MemberAccessScreen';
+import { SpaceProvider, useSpaces } from '../state/space';
 import { DevicesScreen } from './DevicesScreen';
 import { ActivityScreen } from './ActivityScreen';
 import { SettingsScreen } from './SettingsScreen';
@@ -17,6 +20,14 @@ import './shell.css';
  * nothing.
  */
 export function Shell() {
+  return (
+    <SpaceProvider>
+      <ShellContent />
+    </SpaceProvider>
+  );
+}
+
+function ShellContent() {
   const [section, setSection] = useState<SectionId>('spaces');
   const { user, device, signOut } = useSession();
   // Detail sections (trusted devices, power, members) are opened from the map
@@ -102,9 +113,15 @@ function SectionContent({
   section: SectionId;
   onNavigate: (section: SectionId) => void;
 }) {
+  const { activeSpace } = useSpaces();
+
   switch (section) {
     case 'spaces':
       return <SpacesScreen onNavigate={onNavigate} />;
+    case 'data':
+      return <DataPoolScreen space={activeSpace} />;
+    case 'members':
+      return <MemberAccessScreen space={activeSpace} />;
     case 'devices':
       return <DevicesScreen />;
     case 'activity':

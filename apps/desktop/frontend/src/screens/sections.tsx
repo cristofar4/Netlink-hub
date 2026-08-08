@@ -66,15 +66,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'data',
     label: 'Data Pool',
     description: 'Shared internet data, allocations and NetLink Passes',
-    phase: 3,
-    placeholder:
-      'The Data Pool shares an internet data allowance with people you invite, through a licensed provider — never by working around one.',
-    capabilities: [
-      'Provider adapter with a clearly-labelled Demo Provider',
-      'Data allocation with a total, a daily limit and an expiry',
-      'Data-Only NetLink Passes that reveal nothing but the allowance',
-      'Usage tracking by quantity and session time',
-    ],
+    phase: 1,
     icon: icon(
       <>
         <ellipse cx="12" cy="6" rx="8" ry="3" />
@@ -221,15 +213,7 @@ export const DETAIL_SECTIONS: NavSection[] = [
     id: 'members',
     label: 'Member Access',
     description: 'People you have invited, and exactly what they can reach',
-    phase: 3,
-    placeholder:
-      'Invited people use their own NetLink account and receive only the permissions you grant. You never share your password.',
-    capabilities: [
-      'Usage today, total usage, remaining allocation and daily limit',
-      'Pause Data, Edit Limit and Revoke Access',
-      'The full permission list for each member',
-      'Data-Only members see nothing but their own allowance',
-    ],
+    phase: 1,
     icon: null,
   },
 ];
