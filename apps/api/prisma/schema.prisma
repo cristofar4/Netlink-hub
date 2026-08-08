@@ -180,6 +180,8 @@ model Space {
   enrollmentTokens AgentEnrollmentToken[]
   dataPool    DataPool?
   powerCommands PowerCommand[]
+  fileTransfers FileTransfer[]
+  printJobs     PrintJob[]
 
   @@index([ownerId])
   @@map("spaces")
@@ -373,6 +375,9 @@ model Resource {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  transfers FileTransfer[]
+  printJobs PrintJob[]
+
   @@unique([agentId, kind, target])
   @@index([spaceId, kind])
   @@map("resources")
@@ -522,4 +527,90 @@ model PowerCommand {
   @@index([targetAgentId, state])
   @@index([spaceId, createdAt])
   @@map("power_commands")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5 — files and printers
+// ---------------------------------------------------------------------------
+
+enum TransferDirection {
+  download
+  upload
+}
+
+enum TransferState {
+  pending
+  active
+  completed
+  failed
+  cancelled
+}
+
+/// A brokered file transfer.
+///
+/// This records that a transfer was authorised and what became of it. The bytes
+/// never touch this database or this server — they move directly between the
+/// owner's devices, which is why a control-plane compromise cannot leak files.
+model FileTransfer {
+  id         String            @id @default(uuid())
+  spaceId    String
+  space      Space             @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   Resource          @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  agentId    String
+  requestedById String
+  direction  TransferDirection
+  /// Relative to the approved folder. Recorded so an owner can see what moved.
+  path       String
+  state      TransferState     @default(pending)
+  sizeBytes         Decimal?   @db.Decimal(20, 0)
+  transferredBytes  Decimal    @default(0) @db.Decimal(20, 0)
+  checksum   String?
+  detail     String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  completedAt DateTime?
+
+  @@index([spaceId, createdAt])
+  @@index([agentId, state])
+  @@map("file_transfers")
+}
+
+enum PrintJobState {
+  queued
+  sent
+  printing
+  completed
+  failed
+}
+
+/// A print job.
+///
+/// The document is held only until the agent collects it, then dropped. A
+/// printed page is content, and the control plane does not keep content.
+model PrintJob {
+  id         String        @id @default(uuid())
+  spaceId    String
+  space      Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  agentId    String
+  requestedById String
+  printerName String
+  documentName String
+  /// The PDF, base64, cleared the moment the agent takes it.
+  document   String?
+  copies     Int           @default(1)
+  colour     Boolean       @default(true)
+  paperSize  String        @default("A4")
+  state      PrintJobState @default(queued)
+  detail     String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  collectedAt DateTime?
+  completedAt DateTime?
+
+  @@index([agentId, state])
+  @@index([spaceId, createdAt])
+  @@map("print_jobs")
 }

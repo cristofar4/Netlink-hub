@@ -6,6 +6,8 @@ import { SpacesScreen } from './SpacesScreen';
 import { DataPoolScreen } from './DataPoolScreen';
 import { MemberAccessScreen } from './MemberAccessScreen';
 import { PowerScreen } from './PowerScreen';
+import { FilesScreen } from './FilesScreen';
+import { PrintersScreen } from './PrintersScreen';
 import { SpaceProvider, useSpaces } from '../state/space';
 import { DevicesScreen } from './DevicesScreen';
 import { ActivityScreen } from './ActivityScreen';
@@ -125,6 +127,10 @@ function SectionContent({
       return <MemberAccessScreen space={activeSpace} />;
     case 'power':
       return <PowerScreen space={activeSpace} />;
+    case 'files':
+      return <FilesScreen space={activeSpace} />;
+    case 'printers':
+      return <PrintersScreen space={activeSpace} />;
     case 'devices':
       return <DevicesScreen />;
     case 'activity':

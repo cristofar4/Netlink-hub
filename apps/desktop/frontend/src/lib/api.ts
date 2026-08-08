@@ -1,6 +1,8 @@
 import type {
   AgentPowerState,
   AgentSummary,
+  ApprovedFolder,
+  ApproveFolderRequest,
   CreatePassRequest,
   DataPoolSummary,
   MemberAccessRow,
@@ -9,6 +11,11 @@ import type {
   PowerAction,
   PowerCommandRequest,
   PowerCommandSummary,
+  PrintJob,
+  PrintJobRequest,
+  SharedPrinter,
+  StartTransferRequest,
+  Transfer,
   UpdateAllocationRequest,
   AuthSuccessResponse,
   AuthenticatedDevice,
@@ -294,6 +301,51 @@ export class NetLinkApi {
     return this.request('PUT', `/spaces/${spaceId}/power/agents/${agentId}/mac`, {
       body: { macAddress },
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Files and printers
+  // -------------------------------------------------------------------------
+
+  listFolders(spaceId: string): Promise<ApprovedFolder[]> {
+    return this.request('GET', `/spaces/${spaceId}/files/folders`);
+  }
+
+  approveFolder(spaceId: string, body: ApproveFolderRequest): Promise<ApprovedFolder> {
+    return this.request('POST', `/spaces/${spaceId}/files/folders`, { body });
+  }
+
+  startTransfer(spaceId: string, body: StartTransferRequest): Promise<Transfer> {
+    return this.request('POST', `/spaces/${spaceId}/files/transfers`, { body });
+  }
+
+  listTransfers(spaceId: string, limit = 25): Promise<Transfer[]> {
+    return this.request('GET', `/spaces/${spaceId}/files/transfers?limit=${limit}`);
+  }
+
+  fileOperation(
+    spaceId: string,
+    body: {
+      resourceId: string;
+      operation: 'mkdir' | 'rename' | 'delete';
+      path: string;
+      toPath?: string;
+      confirmed?: boolean;
+    },
+  ): Promise<{ accepted: true }> {
+    return this.request('POST', `/spaces/${spaceId}/files/operations`, { body });
+  }
+
+  listPrinters(spaceId: string): Promise<SharedPrinter[]> {
+    return this.request('GET', `/spaces/${spaceId}/printers`);
+  }
+
+  submitPrintJob(spaceId: string, body: PrintJobRequest): Promise<PrintJob> {
+    return this.request('POST', `/spaces/${spaceId}/printers/jobs`, { body });
+  }
+
+  listPrintJobs(spaceId: string, limit = 25): Promise<PrintJob[]> {
+    return this.request('GET', `/spaces/${spaceId}/printers/jobs?limit=${limit}`);
   }
 
   /** The URL the live-updates socket connects to, with the current token. */

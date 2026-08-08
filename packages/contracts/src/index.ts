@@ -4,5 +4,6 @@ export * from './audit';
 export * from './spaces';
 export * from './data';
 export * from './power';
+export * from './files';
 export * from './connection';
 export * from './health';

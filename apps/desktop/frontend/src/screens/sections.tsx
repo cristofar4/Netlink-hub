@@ -102,15 +102,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'files',
     label: 'Files',
     description: 'Folders you have approved on your computers',
-    phase: 5,
-    placeholder:
-      'Only folders you explicitly approve are ever visible here. NetLink never exposes a whole hard drive, and file contents are not stored in the cloud.',
-    capabilities: [
-      'Browse, download and upload inside approved folders only',
-      'Resumable transfers with progress and integrity checking',
-      'Deleting requires its own permission and a confirmation',
-      'Direct encrypted transfer between your devices',
-    ],
+    phase: 1,
     icon: icon(
       <>
         <path d="M4 7a2 2 0 0 1 2-2h3.5l2 2.5H18a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
@@ -121,15 +113,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'printers',
     label: 'Printers',
     description: 'Printers shared from your computers',
-    phase: 5,
-    placeholder:
-      'Printers installed on your home computer, shared only when you approve them. Invited members need the printers.use permission before they can send anything.',
-    capabilities: [
-      'Discover printers installed on the home Windows computer',
-      'Online and ready status',
-      'PDF print jobs with preview, copies, colour and paper size',
-      'An audit entry for every job',
-    ],
+    phase: 1,
     icon: icon(
       <>
         <path d="M7 9V4h10v5" />

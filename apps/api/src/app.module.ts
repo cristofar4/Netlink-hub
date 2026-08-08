@@ -11,6 +11,7 @@ import { SpacesModule } from './spaces/spaces.module';
 import { AgentsModule } from './agents/agents.module';
 import { DataModule } from './data/data.module';
 import { PowerModule } from './power/power.module';
+import { FilesModule } from './files/files.module';
 import { LiveModule } from './live/live.module';
 import { HealthModule } from './health/health.module';
 import { AccessTokenGuard } from './auth/access-token.guard';
@@ -32,6 +33,7 @@ import { AccessTokenGuard } from './auth/access-token.guard';
     AgentsModule,
     DataModule,
     PowerModule,
+    FilesModule,
     HealthModule,
   ],
   providers: [
