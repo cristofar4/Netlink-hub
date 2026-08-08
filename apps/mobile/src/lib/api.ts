@@ -304,7 +304,9 @@ export class NetLinkApi {
   }
 
   activity(limit = 50, cursor?: string): Promise<AuditPage> {
-    const query = cursor ? `?limit=${limit}&cursor=${encodeURIComponent(cursor)}` : `?limit=${limit}`;
+    const query = cursor
+      ? `?limit=${limit}&cursor=${encodeURIComponent(cursor)}`
+      : `?limit=${limit}`;
     return this.request('GET', `/activity${query}`);
   }
 
@@ -312,11 +314,7 @@ export class NetLinkApi {
   // Transport
   // -------------------------------------------------------------------------
 
-  async request<T>(
-    method: string,
-    path: string,
-    options: RequestOptions = {},
-  ): Promise<T> {
+  async request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
     const { auth = true } = options;
 
     if (auth && !this.session) throw new ApiError('You are not signed in.', 401);

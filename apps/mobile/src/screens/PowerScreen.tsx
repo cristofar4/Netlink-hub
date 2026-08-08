@@ -7,7 +7,15 @@ import {
   type AgentPowerState,
   type PowerAction,
 } from '@netlink/contracts';
-import { Alert, Badge, Button, Card, EmptyState, Screen, StatusDot } from '../components/primitives';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Screen,
+  StatusDot,
+} from '../components/primitives';
 import { colors, fontSize, radius, space, touchTarget } from '../theme/tokens';
 import { ApiError } from '../lib/api';
 import { api } from '../state/session';

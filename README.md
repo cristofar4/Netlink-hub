@@ -4,6 +4,8 @@ Secure remote access to your own home or office computers — the files you choo
 
 NetLink is an **app-only** product. There is no NetLink router and no proprietary hardware. You install NetLink on your computers; one of them stays online as the home agent and Wake Helper, and you reach approved resources from another device signed in to the same verified NetLink account. People you invite use **their own** NetLink account and receive a restricted NetLink Pass — you never share your password.
 
+**Runs on Windows, macOS and Android.** A Windows PC or a Mac can be either end of a connection — the computer you reach from, or the computer you reach. An Android phone is a client: it reaches your computers, and is never itself a host. See [docs/WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md), [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md) and [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ---
 
 ## Status
@@ -19,7 +21,9 @@ NetLink is an **app-only** product. There is no NetLink router and no proprietar
 
 ---
 
-## Quick start on Windows
+## Quick start
+
+### Windows
 
 ```powershell
 git clone https://github.com/cristofar4/Netlink-hub.git
@@ -33,9 +37,27 @@ cd Netlink-hub
 .\scripts\dev-windows.ps1
 ```
 
+### macOS
+
+```bash
+git clone https://github.com/cristofar4/Netlink-hub.git
+cd Netlink-hub
+
+./scripts/setup-macos.sh
+./scripts/dev-macos.sh
+```
+
+### On your phone
+
+An Android build needs the control plane reachable at an HTTPS address first.
+[docs/DEPLOY.md](docs/DEPLOY.md) is the four-step path from this repository to an
+APK you install on your own phone.
+
+---
+
 The NetLink window opens on the welcome screen. Create an account, and the six-digit code appears in the API console output (and in the response, because `EXPOSE_DEV_OTP=true` in development). Then sign in — the same code flow verifies this device, and you land on My Spaces.
 
-Run the full gate before you commit:
+Run the full gate before you commit — `test-all.ps1` on Windows, `test-all.sh` on macOS and Linux:
 
 ```powershell
 .\scripts\test-all.ps1

@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { statusFromHeartbeat, type AgentSummary } from '@netlink/contracts';
-import { Alert, Badge, Button, Card, EmptyState, Screen, StatusDot } from '../components/primitives';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Screen,
+  StatusDot,
+} from '../components/primitives';
 import { colors, fontSize, space } from '../theme/tokens';
 import { ApiError } from '../lib/api';
 import { api } from '../state/session';

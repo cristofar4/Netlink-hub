@@ -109,11 +109,7 @@ export function SettingsScreen() {
                           })()
                         }
                       />
-                      <Button
-                        label="Keep it"
-                        variant="ghost"
-                        onPress={() => setConfirming(null)}
-                      />
+                      <Button label="Keep it" variant="ghost" onPress={() => setConfirming(null)} />
                     </View>
                   ) : (
                     <Button

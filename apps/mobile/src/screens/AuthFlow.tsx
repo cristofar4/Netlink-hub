@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import type { ChallengeResponse } from '@netlink/contracts';
 import { Alert, Button, Card, Screen } from '../components/primitives';
 import { colors, fontSize, radius, space, touchTarget } from '../theme/tokens';
@@ -104,11 +112,7 @@ export function AuthFlow() {
                   })
                 }
               />
-              <Button
-                label="Back"
-                variant="ghost"
-                onPress={() => setStage({ name: 'welcome' })}
-              />
+              <Button label="Back" variant="ghost" onPress={() => setStage({ name: 'welcome' })} />
             </Card>
           )}
 
@@ -174,11 +178,7 @@ export function AuthFlow() {
                   })
                 }
               />
-              <Button
-                label="Back"
-                variant="ghost"
-                onPress={() => setStage({ name: 'welcome' })}
-              />
+              <Button label="Back" variant="ghost" onPress={() => setStage({ name: 'welcome' })} />
             </Card>
           )}
 

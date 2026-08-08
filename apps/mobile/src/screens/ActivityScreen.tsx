@@ -68,10 +68,7 @@ export function ActivityScreen() {
             />
           </Card>
         ) : (
-          <Card
-            title="Recent activity"
-            subtitle="What happened, never what was in it."
-          >
+          <Card title="Recent activity" subtitle="What happened, never what was in it.">
             {events.map((event) => (
               <View key={event.id} style={styles.row}>
                 <View
