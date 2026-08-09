@@ -2,7 +2,7 @@
   "name": "netlink",
   "version": "0.1.0",
   "private": true,
-  "description": "NetLink \u2014 secure remote access to your home or office computers, files, printers and shared data.",
+  "description": "NetLink — secure remote access to your home or office computers, files, printers and shared data.",
   "license": "UNLICENSED",
   "workspaces": [
     "packages/contracts",

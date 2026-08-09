@@ -1,7 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration';
-import { MAIL_TRANSPORT, MailService, createMailTransport } from './mail.service';
+import type { Branding } from './branding';
+import { MAIL_BRANDING, MAIL_TRANSPORT, MailService, createMailTransport } from './mail.service';
 
 @Global()
 @Module({
@@ -20,8 +21,21 @@ import { MAIL_TRANSPORT, MailService, createMailTransport } from './mail.service
           SMTP_PASSWORD: config.get('SMTP_PASSWORD', { infer: true }),
         } as AppConfig),
     },
+    {
+      // Resolved once at startup rather than read per message: the name on a
+      // verification email must not change between two codes sent a minute
+      // apart because someone edited an environment variable mid-flight.
+      provide: MAIL_BRANDING,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<AppConfig, true>): Branding => ({
+        name: config.get('BRAND_NAME', { infer: true }),
+        url: config.get('BRAND_URL', { infer: true }),
+        supportEmail: config.get('BRAND_SUPPORT_EMAIL', { infer: true }),
+        footer: config.get('BRAND_FOOTER', { infer: true }),
+      }),
+    },
     MailService,
   ],
-  exports: [MailService, MAIL_TRANSPORT],
+  exports: [MailService, MAIL_TRANSPORT, MAIL_BRANDING],
 })
 export class MailModule {}

@@ -16,6 +16,12 @@
 #   MAIL_FROM
 #       Must be an address your SMTP provider has verified you may send from.
 #
+#   BRAND_NAME / BRAND_URL / BRAND_SUPPORT_EMAIL / BRAND_FOOTER
+#       Your company, as it appears in every verification email. Set at least
+#       BRAND_NAME, and make it agree with the domain in MAIL_FROM — people are
+#       being asked to trust a six-digit code, and the sender is the only thing
+#       they have to check it against.
+#
 # Everything marked `generateValue: true` is created once by Render and never
 # printed. That is deliberate for the two signing keys: if either leaks, every
 # session and every power command signed with it is suspect.
@@ -62,6 +68,17 @@ services:
       # The API refuses to start in production on anything else.
       - key: RATE_LIMIT_STORE
         value: postgres
+
+      # Who the emails say they are from. Set these in the dashboard to your
+      # own company; the placeholders below are the product's own name.
+      - key: BRAND_NAME
+        sync: false
+      - key: BRAND_URL
+        sync: false
+      - key: BRAND_SUPPORT_EMAIL
+        sync: false
+      - key: BRAND_FOOTER
+        sync: false
 
       - key: MAIL_TRANSPORT
         value: smtp

@@ -2,7 +2,7 @@
   "name": "@netlink/api",
   "version": "0.1.0",
   "private": true,
-  "description": "NetLink cloud control plane \u2014 modular monolith (NestJS + Prisma + PostgreSQL).",
+  "description": "NetLink cloud control plane — modular monolith (NestJS + Prisma + PostgreSQL).",
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",

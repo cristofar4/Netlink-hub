@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
 import type { AppConfig } from '../config/configuration';
+import { DEFAULT_BRANDING, type Branding } from './branding';
+import { composeVerificationMail, type VerificationPurpose } from './templates';
 
 export type NetLinkMail = {
   to: string;
@@ -86,91 +88,36 @@ export class SmtpMailTransport implements MailTransport {
   }
 }
 
+export const MAIL_BRANDING = Symbol('MAIL_BRANDING');
+
 @Injectable()
 export class MailService {
-  constructor(@Inject(MAIL_TRANSPORT) private readonly transport: MailTransport) {}
+  constructor(
+    @Inject(MAIL_TRANSPORT) private readonly transport: MailTransport,
+    @Inject(MAIL_BRANDING) private readonly brand: Branding = DEFAULT_BRANDING,
+  ) {}
 
   get transportName(): string {
     return this.transport.name;
+  }
+
+  /** The name these emails are signed with, so callers can report it. */
+  get brandName(): string {
+    return this.brand.name;
   }
 
   async sendVerificationCode(input: {
     to: string;
     name: string;
     code: string;
-    purpose: 'email_verification' | 'device_verification' | 'step_up';
+    purpose: VerificationPurpose;
     deviceName?: string;
     approximateLocation?: string | null;
     expiresInMinutes: number;
   }): Promise<void> {
-    const { subject, headline, body } = this.composeVerification(input);
-    await this.transport.send({
-      to: input.to,
-      subject,
-      text: `${headline}\n\n${input.code}\n\n${body}`,
-      html: renderHtml({ headline, code: input.code, body }),
-    });
+    const { subject, text, html } = composeVerificationMail(input, this.brand);
+    await this.transport.send({ to: input.to, subject, text, html });
   }
-
-  private composeVerification(input: {
-    name: string;
-    purpose: 'email_verification' | 'device_verification' | 'step_up';
-    deviceName?: string;
-    approximateLocation?: string | null;
-    expiresInMinutes: number;
-  }): { subject: string; headline: string; body: string } {
-    const expiry = `This code expires in ${input.expiresInMinutes} minutes and can be used once.`;
-    const ignore = 'If you did not request this, you can ignore this email. Nothing has changed.';
-
-    switch (input.purpose) {
-      case 'email_verification':
-        return {
-          subject: 'Confirm your NetLink account',
-          headline: `Hi ${input.name}, here is your NetLink confirmation code:`,
-          body: `${expiry}\n\n${ignore}`,
-        };
-      case 'device_verification': {
-        const where = input.approximateLocation ? ` near ${input.approximateLocation}` : '';
-        const which = input.deviceName ? ` from "${input.deviceName}"` : '';
-        return {
-          subject: 'Verify a new device on NetLink',
-          headline: `Someone is signing in to your NetLink account${which}${where}. Your code is:`,
-          body: `${expiry}\n\nIf this was not you, do not share this code. Sign in and revoke any device you do not recognise.`,
-        };
-      }
-      case 'step_up':
-        return {
-          subject: 'Confirm a sensitive NetLink action',
-          headline: 'Confirm this action with the code below:',
-          body: `${expiry}\n\n${ignore}`,
-        };
-    }
-  }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function renderHtml(input: { headline: string; code: string; body: string }): string {
-  return `<!doctype html>
-<html><body style="margin:0;padding:24px;background:#080f1f;font-family:Segoe UI,system-ui,sans-serif;color:#e8eefc">
-  <div style="max-width:480px;margin:0 auto;background:#0e1a33;border:1px solid #1c3159;border-radius:16px;padding:28px">
-    <p style="margin:0 0 8px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#6f8bbd">NetLink</p>
-    <p style="margin:0 0 20px;font-size:15px;line-height:1.5">${escapeHtml(input.headline)}</p>
-    <p style="margin:0 0 20px;font-size:34px;letter-spacing:.34em;font-weight:700;color:#38bdf8">${escapeHtml(
-      input.code,
-    )}</p>
-    <p style="margin:0;font-size:13px;line-height:1.6;color:#93a7cc;white-space:pre-line">${escapeHtml(
-      input.body,
-    )}</p>
-  </div>
-</body></html>`;
 }
 
 export function createMailTransport(config: AppConfig): MailTransport {

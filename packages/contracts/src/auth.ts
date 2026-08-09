@@ -19,13 +19,58 @@ export const REFRESH_TOKEN_TTL_DAYS = 30;
 /** A device that was not marked "Trust This Device" gets a short-lived session. */
 export const UNTRUSTED_REFRESH_TOKEN_TTL_DAYS = 1;
 
-const passwordSchema = z
-  .string()
-  .min(12, 'Password must be at least 12 characters')
-  .max(256, 'Password must be at most 256 characters')
-  .refine((v) => /[a-z]/.test(v), 'Password must contain a lowercase letter')
-  .refine((v) => /[A-Z]/.test(v), 'Password must contain an uppercase letter')
-  .refine((v) => /[0-9]/.test(v), 'Password must contain a number');
+export const PASSWORD_MIN_LENGTH = 12;
+export const PASSWORD_MAX_LENGTH = 256;
+
+/**
+ * What makes a password acceptable, as a list the interface can show.
+ *
+ * The schema below is built from these, so the ticks on the sign-up form and
+ * the rules the server enforces cannot drift apart — the failure mode being a
+ * form that accepts a password the API then refuses, with no way for the person
+ * typing it to tell which rule they broke.
+ */
+export const PASSWORD_RULES = [
+  {
+    id: 'length',
+    label: `At least ${PASSWORD_MIN_LENGTH} characters`,
+    message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+    test: (value: string) => value.length >= PASSWORD_MIN_LENGTH,
+  },
+  {
+    id: 'lowercase',
+    label: 'A lowercase letter',
+    message: 'Password must contain a lowercase letter',
+    test: (value: string) => /[a-z]/.test(value),
+  },
+  {
+    id: 'uppercase',
+    label: 'An uppercase letter',
+    message: 'Password must contain an uppercase letter',
+    test: (value: string) => /[A-Z]/.test(value),
+  },
+  {
+    id: 'number',
+    label: 'A number',
+    message: 'Password must contain a number',
+    test: (value: string) => /[0-9]/.test(value),
+  },
+] as const satisfies ReadonlyArray<{
+  id: string;
+  label: string;
+  message: string;
+  test: (value: string) => boolean;
+}>;
+
+const passwordSchema = PASSWORD_RULES.reduce(
+  (schema, rule) => schema.refine(rule.test, rule.message),
+  z
+    .string()
+    .max(
+      PASSWORD_MAX_LENGTH,
+      `Password must be at most ${PASSWORD_MAX_LENGTH} characters`,
+    ) as z.ZodType<string>,
+);
 
 export const emailSchema = z
   .string()

@@ -203,3 +203,129 @@
   display: flex;
   justify-content: center;
 }
+
+/* --- Brand ---------------------------------------------------------------- */
+
+.auth__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  margin-bottom: var(--nl-space-8);
+}
+
+.auth__brand-mark {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(140deg, #5b8cff, #1d3fa8);
+  box-shadow: var(--nl-glow-primary);
+}
+
+.auth__brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 3px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+
+.auth__brand-name {
+  font-size: var(--nl-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* --- Password rules ------------------------------------------------------- */
+
+.auth__rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nl-space-2) var(--nl-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth__rule {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  transition: color var(--nl-duration) var(--nl-ease);
+}
+
+.auth__rule-mark {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--nl-border);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.auth__rule--met {
+  color: var(--nl-success);
+}
+
+.auth__rule--met .auth__rule-mark {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: var(--nl-success-soft);
+}
+
+/* Amber rather than red: an unmet rule on a password still being typed is not
+ * an error, it is a rule not reached yet. */
+.auth__rule--unmet .auth__rule-mark {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+/* --- The device being approved ------------------------------------------- */
+
+.auth__device {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-4);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border-strong);
+  background: var(--nl-surface-sunken);
+}
+
+.auth__device-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--nl-primary-hover);
+  background: var(--nl-primary-soft);
+  border: 1px solid rgba(47, 107, 255, 0.32);
+}
+
+.auth__device-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--nl-text-sm);
+}
+
+.auth__device-text span {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.auth__device-platform {
+  text-transform: capitalize;
+}
+
+@media (max-width: 480px) {
+  .auth__rules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

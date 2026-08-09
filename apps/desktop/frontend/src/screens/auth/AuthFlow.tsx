@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Input, OtpInput, StatusDot, usePrefersReducedMotion } from '@netlink/ui';
-import { OTP_LENGTH, registerRequestSchema, type ChallengeResponse } from '@netlink/contracts';
+import {
+  OTP_LENGTH,
+  PASSWORD_RULES,
+  registerRequestSchema,
+  type ChallengeResponse,
+} from '@netlink/contracts';
 import { api, ApiError } from '../../lib/api';
 import { getDeviceIdentity } from '../../lib/bridge';
 import { useSession } from '../../state/session';
@@ -38,6 +43,16 @@ export function AuthFlow() {
 
       <div className="auth__panel">
         <div className="auth__panel-inner">
+          {/*
+           * The wordmark repeats on every step. It is what a person checks
+           * against the email they were just sent, and a sign-in form with no
+           * identity on it is the shape a phishing page takes.
+           */}
+          <div className="auth__brand">
+            <span className="auth__brand-mark" aria-hidden="true" />
+            <span className="auth__brand-name">NetLink</span>
+          </div>
+
           {step.name === 'welcome' && (
             <Welcome
               onRegister={() => setStep({ name: 'register' })}
@@ -205,10 +220,17 @@ function RegisterStep({
           onChange={(event) => setPassword(event.target.value)}
           placeholder="At least 12 characters"
           autoComplete="new-password"
-          hint="At least 12 characters, with an uppercase letter, a lowercase letter and a number."
           error={fieldErrors.password}
           disabled={busy}
         />
+
+        {/*
+         * The rules are shown as they are met, rather than as a sentence under
+         * the field. A password refused after submitting — with the same
+         * sentence repeated back in red — is the most avoidable failure in any
+         * sign-up form.
+         */}
+        <PasswordRules password={password} />
 
         {error && <Alert tone="error">{error}</Alert>}
 
@@ -453,13 +475,20 @@ function VerifyDeviceStep({
 
   return (
     <CodeStep
-      title="Verify this device"
+      title="Approve this device"
       lead={
         <>
-          This is a new device for your account. Enter the {OTP_LENGTH}-digit code we sent to{' '}
-          <strong>{current.maskedEmail}</strong>.
+          This device has not been used with your account before. Enter the {OTP_LENGTH}-digit code
+          we sent to <strong>{current.maskedEmail}</strong>.
         </>
       }
+      /*
+       * What is actually being approved, stated before the code box. The email
+       * names the device and roughly where it is; showing the same facts here
+       * lets someone compare the two, which is the whole defence against being
+       * talked through this by a stranger on the phone.
+       */
+      subject={<DeviceUnderReview />}
       challenge={current}
       code={code}
       onCodeChange={setCode}
@@ -515,6 +544,7 @@ function CodeStep({
   busy,
   onBack,
   backLabel,
+  subject,
   extra,
 }: {
   title: string;
@@ -530,6 +560,7 @@ function CodeStep({
   busy: boolean;
   onBack: () => void;
   backLabel: string;
+  subject?: React.ReactNode;
   extra?: React.ReactNode;
 }) {
   const [resending, setResending] = useState(false);
@@ -566,6 +597,8 @@ function CodeStep({
           onSubmit();
         }}
       >
+        {subject}
+
         <OtpInput
           value={code}
           onChange={onCodeChange}
@@ -610,6 +643,107 @@ function CodeStep({
         </div>
       </form>
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The device being approved
+// ---------------------------------------------------------------------------
+
+/**
+ * This installation, as the server will record it.
+ *
+ * Read from the same source the sign-in request used, so what is shown here is
+ * what is actually being approved rather than a description of it.
+ */
+function DeviceUnderReview() {
+  const [identity, setIdentity] = useState<{ name: string; platform: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getDeviceIdentity()
+      .then((device) => {
+        if (!cancelled) setIdentity({ name: device.name, platform: device.platform });
+      })
+      .catch(() => {
+        /* The code still works without the summary. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!identity) return null;
+
+  return (
+    <div className="auth__device">
+      <span className="auth__device-icon" aria-hidden="true">
+        <MonitorGlyph />
+      </span>
+      <span className="auth__device-text">
+        <strong>{identity.name}</strong>
+        <span>
+          {/* Only the platform is title-cased — it arrives lowercase from the
+              identity ("windows", "macos"). The rest is a sentence. */}
+          <span className="auth__device-platform">{identity.platform}</span> · requested just now
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function MonitorGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4.5" width="18" height="12" rx="2" />
+      <path d="M9 20h6M12 16.5V20" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Password rules
+// ---------------------------------------------------------------------------
+
+/**
+ * The password requirements, ticking off as they are met.
+ *
+ * The list comes from the contracts package — the same one the schema is built
+ * from — so it cannot promise a rule the server does not enforce, or miss one
+ * it does. Nothing is marked failed until something has been typed: a form that
+ * greets you with four red crosses is telling you off for not having started.
+ */
+function PasswordRules({ password }: { password: string }) {
+  const started = password.length > 0;
+
+  return (
+    <ul className="auth__rules">
+      {PASSWORD_RULES.map((rule) => {
+        const met = rule.test(password);
+        return (
+          <li
+            key={rule.id}
+            className={`auth__rule${met ? ' auth__rule--met' : started ? ' auth__rule--unmet' : ''}`}
+          >
+            <span className="auth__rule-mark" aria-hidden="true">
+              {met ? '✓' : '·'}
+            </span>
+            {rule.label}
+            <span className="nl-visually-hidden">{met ? ' — met' : ' — not met yet'}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

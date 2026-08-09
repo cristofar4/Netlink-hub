@@ -19,11 +19,11 @@ Every number below was produced by running the checks, not estimated.
 | `go vet` (agent, desktop) | Clean |
 | TypeScript — contracts, ui, api, frontend, mobile | Clean |
 | Contract tests | **54 passed** |
-| API tests (unit + integration, real PostgreSQL) | **296 passed**, 12 suites |
+| API tests (unit + integration, real PostgreSQL) | **305 passed**, 13 suites |
 | Go tests (agent) | **208 passed**, 10 packages |
 | Frontend tests | **40 passed** |
 | Mobile tests | **11 passed** |
-| **Total automated tests** | **609 passed, 0 failing** |
+| **Total automated tests** | **618 passed, 0 failing** |
 | Android bundle | Metro bundles the phone app (645 modules) |
 | Production builds — contracts, API, frontend, agent | All succeed |
 | Windows cross-compile — agent, desktop | Both succeed (DPAPI path compiles) |
@@ -365,6 +365,35 @@ them: the events are all recorded, but nothing delivers them. There is no "edit
 profile" button, because no endpoint changes a name or an email. Two-factor is
 stated as a fact — new-device verification is always on and cannot be switched
 off — rather than drawn as a toggle somebody could believe they had disabled.
+
+### Sign-in, sign-up, and who the emails come from
+
+The rebuild originally stopped at the app's front door. Both sides of the door
+are now finished too.
+
+**The auth screens.** The wordmark repeats on every step — it is what someone
+checks against the email they were just sent, and a sign-in form with no
+identity on it is the shape a phishing page takes. The password rules tick off
+as they are met, from `PASSWORD_RULES` in the contracts package, which the
+schema itself is built from: the form cannot promise a rule the server does not
+enforce, or miss one it does. The device-approval step now names the device
+being approved, so it can be compared against the email — which is the whole
+defence against being talked through this by a stranger on the phone.
+
+**The emails.** They were signed "NetLink" in hardcoded strings. A verification
+code is the most phishable message this product sends, and the defence is that
+the real one is recognisable: it comes from the company the person signed up
+with. So the brand is configuration — `BRAND_NAME`, `BRAND_URL`,
+`BRAND_SUPPORT_EMAIL`, `BRAND_FOOTER` — and it appears in every subject line,
+body and footer.
+
+Alongside that:
+
+- Both parts are written, not stripped. A client set to plain text, a screen reader and a spam filter all read the text half, and a code that only exists in a `<div>` is a code some people cannot reach.
+- The code is never in the subject line, because subjects show on lock screens.
+- Every interpolated value is escaped — a person's name is the one piece of attacker-controlled text in the message, and an email renders HTML.
+- The new-device email names the device and its approximate location, and says plainly that the company will never ask for the code.
+- Production refuses to start while `MAIL_FROM` is still the development default, because sending from a domain that does not exist means every code is rejected or filed as spam — and the first anyone hears of it is a user who cannot sign in.
 
 ### One real bug found on the way
 

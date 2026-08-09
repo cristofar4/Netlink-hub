@@ -49,6 +49,27 @@ const configSchema = z
     UNTRUSTED_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(1),
 
     /**
+     * Who the emails come from.
+     *
+     * These are configuration rather than constants because the people
+     * receiving a six-digit code need to recognise the sender — an email
+     * signed by a product name they have never heard of reads as phishing,
+     * which is exactly the instinct you want people to keep.
+     *
+     * BRAND_NAME appears in every subject line, in the message body and in the
+     * footer. MAIL_FROM must be an address on a domain your SMTP provider has
+     * verified you may send from; the two should agree, or spam filters will
+     * notice that they do not.
+     */
+    BRAND_NAME: z.string().trim().min(1).max(60).default('NetLink'),
+    /** Linked from the email footer. Omit and the footer simply has no link. */
+    BRAND_URL: z.string().url().optional(),
+    /** Shown as "questions? write to …". Omit to leave it out. */
+    BRAND_SUPPORT_EMAIL: z.string().email().optional(),
+    /** The legal line at the very bottom, e.g. a company name and address. */
+    BRAND_FOOTER: z.string().trim().max(200).optional(),
+
+    /**
      * `console` prints the message (and the code) to the server log for local
      * development. `smtp` performs real delivery. `memory` is used by tests.
      */
@@ -154,6 +175,18 @@ const configSchema = z
           code: z.ZodIssueCode.custom,
           path: ['MAIL_TRANSPORT'],
           message: 'MAIL_TRANSPORT must be smtp in production',
+        });
+      }
+      if (cfg.MAIL_FROM.includes('netlink.local')) {
+        // The development default is an address on a domain that does not
+        // exist. Sending from it in production means every verification code
+        // is either rejected outright or filed as spam — and the first anyone
+        // hears of it is a user who cannot sign in.
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['MAIL_FROM'],
+          message:
+            'MAIL_FROM is still the development default. Set it to an address on a domain your SMTP provider has verified.',
         });
       }
     }
