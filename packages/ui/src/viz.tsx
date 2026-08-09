@@ -220,17 +220,22 @@ export function BarChart({
   return (
     <figure className="nl-chart">
       <div className="nl-chart__frame" style={{ height }}>
+        {/*
+         * Keyed by position rather than by value: an empty series has a flat
+         * axis where every tick is zero, and duplicate keys make React drop
+         * gridlines. The position is what identifies a gridline anyway.
+         */}
         <div className="nl-chart__axis" aria-hidden="true">
-          {gridlines.map((tick) => (
-            <span key={tick} className="nl-chart__tick">
+          {gridlines.map((tick, index) => (
+            <span key={index} className="nl-chart__tick">
               {formatTick(tick)}
             </span>
           ))}
         </div>
 
         <div className="nl-chart__plot" role="img" aria-label={caption}>
-          {gridlines.map((tick) => (
-            <span key={tick} className="nl-chart__grid" aria-hidden="true" />
+          {gridlines.map((_, index) => (
+            <span key={index} className="nl-chart__grid" aria-hidden="true" />
           ))}
 
           <div className="nl-chart__bars">

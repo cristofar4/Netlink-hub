@@ -170,7 +170,10 @@ survives, the animation does not.
 
 .remote__resources {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  /* auto-fill rather than auto-fit: with one computer in a Space, auto-fit
+   * stretches its card across the whole row and the artwork goes letterbox.
+   * A card should be the same size whether there is one or six. */
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--nl-space-4);
 }
 

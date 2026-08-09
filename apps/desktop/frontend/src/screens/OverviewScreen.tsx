@@ -391,7 +391,13 @@ function Assist({
         <PulseIcon />
       </div>
       <div className="overview__assist-text">
-        <strong>{failing.length === 0 ? 'Everything looks good' : failing[0].label}</strong>
+        {/*
+         * A failing signal's label is phrased as the thing that should be true
+         * ("A computer is reachable"), so printing it as the headline over its
+         * own failure reads as a claim that the opposite is the case. When
+         * something has failed the headline says so and the detail explains it.
+         */}
+        <strong>{failing.length === 0 ? 'Everything looks good' : 'Needs attention'}</strong>
         <span>{failing.length === 0 ? allGoodLine(days) : failing[0].detail}</span>
 
         {failing.length > 1 && (
