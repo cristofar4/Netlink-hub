@@ -116,6 +116,26 @@ export function PowerScreen({ space }: { space: SpaceSummary | null }) {
             />
           </div>
 
+          {/*
+           * Waking a computer that is switched off takes a second machine on
+           * the same network to send the packet. When that is the situation,
+           * the pair is drawn — the relationship is the whole explanation for
+           * why "Turn on" is available here and greyed out somewhere else.
+           */}
+          {!state.online && (
+            <WakePair
+              target={state}
+              helper={
+                states.find(
+                  (candidate) =>
+                    candidate.agentId !== state.agentId &&
+                    candidate.isWakeHelper &&
+                    candidate.online,
+                ) ?? null
+              }
+            />
+          )}
+
           {state.pending ? (
             <PendingCommand
               command={state.pending}
@@ -201,37 +221,104 @@ export function PowerScreen({ space }: { space: SpaceSummary | null }) {
       ))}
 
       {history.length > 0 && (
-        <Card title="Recent power actions" subtitle="Every request and result is recorded.">
-          <ul className="nl-stack" style={{ gap: 10, listStyle: 'none', padding: 0, margin: 0 }}>
+        <Card title="Power activity" subtitle="Every request and its result, most recent first.">
+          <ul className="power__timeline">
             {history.map((command) => (
-              <li key={command.id} className="nl-row" style={{ gap: 12, flexWrap: 'wrap' }}>
-                <Badge
-                  tone={
-                    command.state === 'succeeded'
-                      ? 'success'
-                      : command.state === 'failed'
-                        ? 'danger'
-                        : command.state === 'cancelled'
-                          ? 'warning'
-                          : 'neutral'
-                  }
-                >
-                  {command.state}
-                </Badge>
-                <span style={{ fontSize: 'var(--nl-text-sm)' }}>
-                  {POWER_ACTION_LABELS[command.action]} · {command.targetAgentName}
+              <li key={command.id} className={`power__event power__event--${command.state}`}>
+                <span className="power__event-mark" aria-hidden="true" />
+                <span className="power__event-body">
+                  <span className="power__event-title">
+                    {POWER_ACTION_LABELS[command.action]} · {command.targetAgentName}
+                  </span>
+                  <span className="power__event-detail">
+                    <Badge
+                      tone={
+                        command.state === 'succeeded'
+                          ? 'success'
+                          : command.state === 'failed'
+                            ? 'danger'
+                            : command.state === 'cancelled'
+                              ? 'warning'
+                              : 'neutral'
+                      }
+                    >
+                      {command.state}
+                    </Badge>
+                    {command.detail && <span>{command.detail}</span>}
+                  </span>
                 </span>
-                <div className="nl-spacer" />
-                <span className="nl-dim" style={{ fontSize: 'var(--nl-text-xs)' }}>
-                  {new Date(command.requestedAt).toLocaleTimeString()}
-                  {command.detail && ` · ${command.detail}`}
-                </span>
+                <time className="power__event-time" dateTime={command.requestedAt}>
+                  {new Date(command.requestedAt).toLocaleString()}
+                </time>
               </li>
             ))}
           </ul>
         </Card>
       )}
+
+      <p className="power__footnote">
+        Every power action is recorded, and the destructive ones ask for a six-digit code first.
+      </p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The wake pair
+// ---------------------------------------------------------------------------
+
+/**
+ * The helper and the machine it can wake.
+ *
+ * Drawn only when the target is offline, because that is the only time it
+ * matters. With no helper online the path is dashed and the caption says
+ * plainly that nothing here can turn this computer on — which is the truth, and
+ * is more useful than a diagram implying otherwise.
+ */
+function WakePair({ target, helper }: { target: AgentPowerState; helper: AgentPowerState | null }) {
+  return (
+    <div className="power__pair">
+      <div className="power__pair-node power__pair-node--online">
+        <span className="power__pair-disc" aria-hidden="true">
+          <MonitorGlyph />
+        </span>
+        <span className="power__pair-name">{helper?.agentName ?? 'No helper online'}</span>
+        <span className="power__pair-state">{helper ? 'Wake Helper · online' : 'Cannot wake'}</span>
+      </div>
+
+      <div className={`power__pair-link${helper ? ' power__pair-link--live' : ''}`}>
+        <span className="power__pair-link-label">
+          {helper ? 'Same local network' : 'No path to wake'}
+        </span>
+      </div>
+
+      <div className="power__pair-node">
+        <span className="power__pair-disc" aria-hidden="true">
+          <MonitorGlyph />
+        </span>
+        <span className="power__pair-name">{target.agentName}</span>
+        <span className="power__pair-state">Powered off or unreachable</span>
+      </div>
+    </div>
+  );
+}
+
+function MonitorGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4.5" width="18" height="12" rx="2" />
+      <path d="M9 20h6M12 16.5V20" />
+    </svg>
   );
 }
 

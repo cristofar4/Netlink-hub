@@ -1,0 +1,331 @@
+/*
+ * The application top bar.
+ *
+ * Everything is anchored to the right except the heading, so the controls stay
+ * where the eye learned to find them regardless of how long a section title is.
+ */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-5);
+  padding: var(--nl-space-5) var(--nl-space-8);
+  border-bottom: 1px solid var(--nl-border);
+  background: rgba(6, 11, 24, 0.6);
+  backdrop-filter: blur(16px);
+}
+
+.topbar__heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.topbar__title {
+  font-size: var(--nl-text-2xl);
+  font-weight: 640;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__subtitle {
+  margin-top: 2px;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-muted);
+}
+
+.topbar__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  flex: none;
+}
+
+/* --- Space picker ------------------------------------------------------- */
+
+.topbar__menu {
+  position: relative;
+}
+
+.topbar__pill {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  padding: 9px var(--nl-space-4);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface);
+  color: var(--nl-text);
+  font-size: var(--nl-text-sm);
+  cursor: pointer;
+  transition: border-color var(--nl-duration) var(--nl-ease);
+}
+
+.topbar__pill:hover {
+  border-color: var(--nl-border-strong);
+}
+
+.topbar__pill-label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Search ------------------------------------------------------------- */
+
+.topbar__search {
+  position: relative;
+}
+
+.topbar__search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  padding: 0 var(--nl-space-4);
+  height: 38px;
+  width: 220px;
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+  color: var(--nl-text-muted);
+  transition: border-color var(--nl-duration) var(--nl-ease);
+}
+
+.topbar__search-field:focus-within {
+  border-color: var(--nl-primary);
+}
+
+.topbar__search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--nl-text);
+  font-size: var(--nl-text-sm);
+  outline: none;
+}
+
+.topbar__search-input::placeholder {
+  color: var(--nl-text-muted);
+}
+
+/* Chromium draws its own clear button on a search input; it sits badly on a
+ * dark ground and duplicates Escape. */
+.topbar__search-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* --- Buttons ------------------------------------------------------------ */
+
+.topbar__icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface);
+  color: var(--nl-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--nl-duration) var(--nl-ease),
+    border-color var(--nl-duration) var(--nl-ease);
+}
+
+.topbar__icon-button:hover {
+  color: var(--nl-text);
+  border-color: var(--nl-border-strong);
+}
+
+/* Unread marker. Paired with the button's accessible name, which says how
+ * many — a coloured dot on its own is not a count. */
+.topbar__dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nl-cyan);
+  box-shadow: var(--nl-glow-cyan);
+}
+
+.topbar__avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(47, 107, 255, 0.45);
+  background: linear-gradient(140deg, #2f6bff, #1b3ea8);
+  color: #fff;
+  font-size: var(--nl-text-sm);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+/* --- Dropdowns ---------------------------------------------------------- */
+
+.topbar__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 220px;
+  margin: 0;
+  padding: var(--nl-space-2);
+  list-style: none;
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border-strong);
+  background: var(--nl-surface-strong);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--nl-shadow-lg);
+}
+
+.topbar__dropdown--wide {
+  min-width: 300px;
+}
+
+.topbar__option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--nl-space-3);
+  border: none;
+  border-radius: var(--nl-radius-sm);
+  background: none;
+  color: var(--nl-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar__option:hover {
+  background: var(--nl-surface-hover);
+}
+
+.topbar__option--active {
+  background: var(--nl-primary-soft);
+}
+
+.topbar__option-name {
+  font-size: var(--nl-text-sm);
+  font-weight: 550;
+}
+
+.topbar__option-detail,
+.topbar__event-time {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.topbar__empty {
+  padding: var(--nl-space-3);
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-muted);
+}
+
+.topbar__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-2);
+}
+
+.topbar__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--nl-space-2) var(--nl-space-3);
+  font-size: var(--nl-text-sm);
+}
+
+.topbar__link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--nl-primary-hover);
+  font-size: var(--nl-text-xs);
+  cursor: pointer;
+}
+
+.topbar__events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.topbar__event {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-2);
+  padding: var(--nl-space-2) var(--nl-space-3);
+  border-radius: var(--nl-radius-sm);
+}
+
+.topbar__event-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: var(--nl-text-sm);
+  min-width: 0;
+}
+
+.topbar__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--nl-space-3);
+}
+
+.topbar__identity-name {
+  font-weight: 600;
+}
+
+.topbar__identity-email {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar__identity-device {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  padding: 0 var(--nl-space-3) var(--nl-space-3);
+  border-bottom: 1px solid var(--nl-border);
+  flex-wrap: wrap;
+}
+
+.topbar__menu-action {
+  width: 100%;
+  padding: var(--nl-space-3);
+  border: none;
+  border-radius: var(--nl-radius-sm);
+  background: none;
+  color: var(--nl-text);
+  font-size: var(--nl-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar__menu-action:hover {
+  background: var(--nl-surface-hover);
+}
+
+@media (max-width: 1100px) {
+  /* The search field is the first thing to go: it is the only control here
+   * whose function is reachable another way. */
+  .topbar__search {
+    display: none;
+  }
+}

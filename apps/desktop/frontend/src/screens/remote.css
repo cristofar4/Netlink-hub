@@ -13,15 +13,15 @@ visibly different at a glance, from across a room, without reading anything.
   border-radius: var(--nl-radius-lg);
   overflow: hidden;
   background: #05070f;
-  border: 2px solid var(--nl-warning, #e8a33d);
-  box-shadow: var(--nl-shadow-card);
+  border: 2px solid var(--nl-warning);
+  box-shadow: var(--nl-shadow);
   /* A 16:9 box before the first frame lands, so the card does not jump when it
      does. */
   aspect-ratio: 16 / 9;
 }
 
 .remote__stage--view {
-  border-color: var(--nl-accent-cyan);
+  border-color: var(--nl-cyan);
 }
 
 .remote__canvas {
@@ -46,8 +46,8 @@ visibly different at a glance, from across a room, without reading anything.
   padding: 4px 10px;
   border-radius: var(--nl-radius-pill, 999px);
   background: rgba(5, 7, 15, 0.72);
-  border: 1px solid var(--nl-accent-cyan);
-  color: var(--nl-accent-cyan);
+  border: 1px solid var(--nl-cyan);
+  color: var(--nl-cyan);
   font-size: var(--nl-text-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -97,5 +97,374 @@ survives, the animation does not.
   .remote__watermark {
     animation: none;
     opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Network Access                                                            */
+/* ------------------------------------------------------------------------ */
+
+.remote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-5);
+}
+
+.remote__assurance {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-4);
+}
+
+.remote__assurance strong {
+  display: block;
+  font-size: var(--nl-text-base);
+}
+
+.remote__assurance p {
+  margin-top: 3px;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+  line-height: 1.6;
+}
+
+.remote__assurance-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--nl-success);
+  background: var(--nl-success-soft);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.remote__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--nl-space-4);
+}
+
+.remote__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: var(--nl-space-5);
+  align-items: start;
+}
+
+.remote__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-5);
+  min-width: 0;
+}
+
+.remote__lede {
+  font-size: var(--nl-text-sm);
+  line-height: 1.7;
+  color: var(--nl-text-secondary);
+}
+
+/* --- Resource cards ----------------------------------------------------- */
+
+.remote__resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--nl-space-4);
+}
+
+.remote__resource {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--nl-space-2);
+  padding: var(--nl-space-4);
+  border-radius: var(--nl-radius-lg);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+  text-align: center;
+}
+
+.remote__resource-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 86px;
+  margin-bottom: var(--nl-space-2);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  color: #cfe0ff;
+}
+
+/* Each kind of resource gets its own ground, so the cards are told apart by
+ * shape and colour before anyone reads the label. */
+.remote__resource-art--screen {
+  background: radial-gradient(120% 120% at 30% 0%, #2a63d8, #0b1c47);
+}
+
+.remote__resource-art--folder {
+  background: radial-gradient(120% 120% at 30% 0%, #2f7fd8, #10254f);
+}
+
+.remote__resource-art--printer {
+  background: radial-gradient(120% 120% at 30% 0%, #33405c, #131a2c);
+}
+
+.remote__resource-name {
+  font-size: var(--nl-text-base);
+  font-weight: 600;
+}
+
+.remote__resource-detail {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.remote__resource-actions {
+  display: flex;
+  gap: var(--nl-space-2);
+  margin-top: var(--nl-space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.remote__resource-hint {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--nl-primary-hover);
+  font-size: var(--nl-text-xs);
+  cursor: pointer;
+}
+
+/* --- Recent connections ------------------------------------------------- */
+
+.remote__table-wrap {
+  overflow-x: auto;
+}
+
+.remote__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--nl-text-sm);
+}
+
+.remote__table th {
+  text-align: left;
+  font-size: var(--nl-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--nl-text-muted);
+  padding-bottom: var(--nl-space-3);
+  border-bottom: 1px solid var(--nl-border);
+  white-space: nowrap;
+}
+
+.remote__table td {
+  padding: var(--nl-space-3) var(--nl-space-3) var(--nl-space-3) 0;
+  border-bottom: 1px solid var(--nl-border);
+  vertical-align: middle;
+}
+
+.remote__table tr:last-child td {
+  border-bottom: none;
+}
+
+.remote__table-dim {
+  color: var(--nl-text-muted);
+  font-size: var(--nl-text-xs);
+  white-space: nowrap;
+}
+
+/* --- Access permissions ------------------------------------------------- */
+
+.remote__side {
+  min-width: 0;
+}
+
+.remote__members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
+}
+
+.remote__member {
+  padding: var(--nl-space-3);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+}
+
+.remote__member-head {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  margin-bottom: var(--nl-space-3);
+}
+
+.remote__member-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--nl-primary-soft);
+  border: 1px solid var(--nl-border-strong);
+  font-size: var(--nl-text-xs);
+  font-weight: 650;
+}
+
+.remote__member-name {
+  font-size: var(--nl-text-sm);
+  font-weight: 550;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote__grants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.remote__grant {
+  padding: 3px 9px;
+  border-radius: var(--nl-radius-pill);
+  border: 1px solid var(--nl-cyan-dim);
+  background: var(--nl-cyan-faint);
+  color: var(--nl-text-secondary);
+  font-size: var(--nl-text-xs);
+}
+
+.remote__grant--none {
+  border-color: var(--nl-border);
+  background: transparent;
+  color: var(--nl-text-muted);
+}
+
+.remote__side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-2);
+  margin-top: var(--nl-space-5);
+}
+
+/* ------------------------------------------------------------------------ */
+/* The live session                                                          */
+/* ------------------------------------------------------------------------ */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
+}
+
+.stage__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-4);
+  padding: var(--nl-space-3) var(--nl-space-4);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface);
+  flex-wrap: wrap;
+}
+
+.stage__bar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  font-weight: 600;
+}
+
+.stage__bar-metric {
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--nl-space-4);
+  align-items: start;
+}
+
+.stage__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
+  min-width: 0;
+}
+
+.stage__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-3);
+  margin: 0;
+}
+
+.stage__facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--nl-space-3);
+  font-size: var(--nl-text-sm);
+}
+
+.stage__facts dt {
+  color: var(--nl-text-muted);
+}
+
+.stage__facts dd {
+  margin: 0;
+  text-align: right;
+  min-width: 0;
+}
+
+.stage__quality--good {
+  color: var(--nl-success);
+}
+
+.stage__quality--fair {
+  color: var(--nl-cyan);
+}
+
+.stage__quality--poor {
+  color: var(--nl-warning);
+}
+
+.stage__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-2);
+}
+
+.stage__note {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  line-height: 1.6;
+}
+
+/* The stage keeps its own margin only inside a card; here the grid spaces it. */
+.stage__body .remote__stage {
+  margin: 0;
+}
+
+@media (max-width: 1180px) {
+  .remote__body,
+  .stage__body {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

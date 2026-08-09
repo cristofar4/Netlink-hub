@@ -1,7 +1,7 @@
 # NetLink Project Status
 
-**Last updated:** end of Phase 7
-**Current state:** all seven phases complete. All checks and builds passing.
+**Last updated:** end of Phase 10, the interface rebuild
+**Current state:** every phase complete. All checks and builds passing.
 
 This document is the honest record of what NetLink actually does today. Anything not listed as complete is not built, however finished the navigation may look.
 
@@ -17,12 +17,14 @@ Every number below was produced by running the checks, not estimated.
 | gofmt (agent, desktop) | Clean |
 | ESLint (API) | Clean |
 | `go vet` (agent, desktop) | Clean |
-| TypeScript — contracts, ui, api, frontend | Clean |
-| Contract tests | **48 passed** |
-| API tests (unit + integration, real PostgreSQL) | **286 passed**, 11 suites |
-| Go tests (agent) | **208 passed**, 9 packages |
-| Frontend tests | **25 passed** |
-| **Total automated tests** | **567 passed, 0 failing** |
+| TypeScript — contracts, ui, api, frontend, mobile | Clean |
+| Contract tests | **54 passed** |
+| API tests (unit + integration, real PostgreSQL) | **296 passed**, 12 suites |
+| Go tests (agent) | **208 passed**, 10 packages |
+| Frontend tests | **40 passed** |
+| Mobile tests | **11 passed** |
+| **Total automated tests** | **609 passed, 0 failing** |
+| Android bundle | Metro bundles the phone app (645 modules) |
 | Production builds — contracts, API, frontend, agent | All succeed |
 | Windows cross-compile — agent, desktop | Both succeed (DPAPI path compiles) |
 | End-to-end UI walkthrough (Playwright, real API) | Full flow passes, no console errors |
@@ -295,6 +297,81 @@ Authenticode alone is not enough: an attacker who serves a *genuine, signed, old
 ### A threat model with a reviewer's pack
 
 THREAT_MODEL.md now covers T1–T17 and closes with §7: where to start reading, the seven claims worth attacking with the file that enforces each and the test that proves it, how to run the thing, and — most usefully — what we already know is weak, so nobody spends a week confirming it.
+
+---
+
+## Phase 10 — The interface rebuild ✅
+
+Everything the product does was already built. What it looked like had not kept
+up: a column of cards where the design called for instruments — a data gauge, a
+usage chart, a map of a Space, a session panel that reports how a connection is
+actually holding up.
+
+This phase rebuilt the presentation layer of both clients against that design.
+It changed how the product *reads*, not what it does — with two exceptions,
+noted below, where the interface needed a number the API had never been asked
+for.
+
+### Two new endpoints, because a chart cannot invent its data
+
+| | |
+|---|---|
+| `GET /spaces/:id/data/usage` | Daily usage, one bucket per calendar day (UTC), **empty days included** — a chart that drops quiet days shows a busy fortnight and a quiet month as the same shape. Aggregated in PostgreSQL rather than by pulling every usage row into the process. Someone who manages the pool sees the Space; a member sees their own allocation and no one else's, decided from a grant read once so opening the screen as a member does not write a denial to the audit log on every load |
+| `GET /spaces/:id/overview` | Everything the dashboard shows, in one consistent read — computers, shared resources, members, live sessions, the Data Pool if the caller may manage it, and a health score. Previously five parallel requests that could disagree with each other mid-flight |
+
+### Network health is a sum of checks, not a mood
+
+The score on the dashboard is the summed weight of six signals that were
+actually evaluated against the database: a computer is reachable (30), nothing
+was refused in the last 24 hours (20), a Data Pool is connected (15), more than
+a tenth of the allowance is left (15), a Wake Helper is online (10), something
+is shared (10). The weights live in `packages/contracts/src/spaces.ts` and a
+test fails if they stop summing to 100.
+
+Every signal carries the sentence the owner reads when it fails, so a score of
+70 can always be explained rather than merely displayed.
+
+### Numbers that are measured, and numbers that are refused
+
+- **Latency** is a real round trip, timed in the client against the liveness endpoint — what matters is how far the service is from *you*, which the server cannot report. When the ping fails the tile says "No answer" rather than showing the last good figure.
+- **"May last N days"** divides what is left by the mean daily usage over the window. With no usage recorded there is no projection: the tile says "Unknown" and the reason underneath it, because a number derived from no measurements is a guess wearing a number's clothes.
+- **Session quality** puts a word to the frame round-trip, with the millisecond figure beside it so nobody has to take the label's word for it.
+
+### What the screens became
+
+| Screen | |
+|---|---|
+| Overview | Four measured tiles, the Space map with a progress ring on the Data Pool node, quick actions, NetLink Assist reporting the failing check by name, recent activity |
+| Data Pool | A radial gauge for what is left, four tiles, a daily usage chart with a selectable window, the connected provider account, and per-member meters |
+| Network Access | Resource cards for computers, folders and printers; a recent-connections table; and an access-permissions panel listing what each member actually holds |
+| Live session | Session chrome with the mode badge, a details panel, a fixed-scale latency sparkline, and quick actions that go where the action lives |
+| Power and Wake | The wake pair drawn as helper → target, so "why is Turn On available here" is visible rather than explained |
+| Settings | Eight sections behind a sub-nav, each stating what NetLink actually does |
+| Phone | Home, Data Pool, Remote and Settings, with a data ring built from rotated half-discs rather than a native SVG dependency |
+
+### Chrome that does something
+
+The top bar's search filters the sections and the active Space's computers,
+folders and printers, and navigates to what you pick — the index is built when
+the box is first focused rather than on every screen. The bell shows real audit
+events with a count of the ones since it was last opened. Both exist because a
+search box that filters nothing and a bell that never rings teach people the
+chrome is decoration.
+
+### Where a control would have been a promise
+
+Notification switches are drawn and disabled, and say "not built yet" beside
+them: the events are all recorded, but nothing delivers them. There is no "edit
+profile" button, because no endpoint changes a name or an email. Two-factor is
+stated as a fact — new-device verification is always on and cannot be switched
+off — rather than drawn as a toggle somebody could believe they had disabled.
+
+### One real bug found on the way
+
+`remote.css` referenced `--nl-accent-cyan` and `--nl-shadow-card`, neither of
+which exists in the token file. The view-only session frame — the cue that tells
+someone at a glance whether they are watching a screen or driving it — was
+falling back to `currentColor`. Fixed to the real tokens.
 
 ---
 

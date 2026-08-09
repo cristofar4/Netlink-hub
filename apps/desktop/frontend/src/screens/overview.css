@@ -1,0 +1,212 @@
+/* The dashboard: a row of numbers, the map, the side rail, then the log. */
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-5);
+}
+
+.overview__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--nl-space-4);
+}
+
+.overview__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--nl-space-5);
+  align-items: start;
+}
+
+.overview__map-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
+  min-width: 0;
+}
+
+.overview__map-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-4);
+  flex-wrap: wrap;
+}
+
+.overview__space-name {
+  font-size: var(--nl-text-lg);
+  font-weight: 640;
+}
+
+.overview__space-detail {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.overview__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
+  min-width: 0;
+}
+
+/* --- Quick actions ------------------------------------------------------ */
+
+.overview__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-2);
+}
+
+.overview__action {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  width: 100%;
+  padding: var(--nl-space-3) var(--nl-space-4);
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius);
+  background: var(--nl-surface-sunken);
+  color: var(--nl-text);
+  font-size: var(--nl-text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--nl-duration) var(--nl-ease),
+    background var(--nl-duration) var(--nl-ease);
+}
+
+.overview__action:hover {
+  border-color: var(--nl-border-strong);
+  background: var(--nl-surface-hover);
+}
+
+.overview__action-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--nl-radius-sm);
+  color: var(--nl-primary-hover);
+  background: var(--nl-primary-soft);
+}
+
+.overview__action-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.overview__action-chevron {
+  color: var(--nl-text-muted);
+  flex: none;
+}
+
+/* --- Assist ------------------------------------------------------------- */
+
+.overview__assist {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-4);
+}
+
+.overview__assist-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid;
+}
+
+.overview__assist-mark--ok {
+  color: var(--nl-cyan);
+  background: var(--nl-cyan-faint);
+  border-color: var(--nl-cyan-dim);
+}
+
+.overview__assist-mark--warn {
+  color: var(--nl-warning);
+  background: var(--nl-warning-soft);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.overview__assist-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+}
+
+.overview__assist-text strong {
+  color: var(--nl-text);
+  font-weight: 600;
+}
+
+.overview__assist-more {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+/* --- Activity ----------------------------------------------------------- */
+
+.overview__activity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.overview__activity-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-3) 0;
+  border-bottom: 1px solid var(--nl-border);
+  font-size: var(--nl-text-sm);
+}
+
+.overview__activity-row:last-child {
+  border-bottom: none;
+}
+
+.overview__activity-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview__activity-time {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  flex: none;
+}
+
+.overview__link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--nl-primary-hover);
+  font-size: var(--nl-text-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.overview__link:hover {
+  text-decoration: underline;
+}
+
+.overview__empty {
+  font-size: var(--nl-text-sm);
+}
+
+@media (max-width: 1180px) {
+  .overview__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

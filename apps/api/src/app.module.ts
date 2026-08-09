@@ -10,6 +10,7 @@ import { DevicesModule } from './devices/devices.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { AgentsModule } from './agents/agents.module';
 import { DataModule } from './data/data.module';
+import { OverviewModule } from './overview/overview.module';
 import { PowerModule } from './power/power.module';
 import { FilesModule } from './files/files.module';
 import { RemoteModule } from './remote/remote.module';
@@ -37,6 +38,7 @@ import { ObservabilityMiddleware } from './common/observability.middleware';
     DevicesModule,
     AgentsModule,
     DataModule,
+    OverviewModule,
     PowerModule,
     FilesModule,
     RemoteModule,

@@ -6,6 +6,7 @@ import { colors, fontSize, space } from '../theme/tokens';
 import { API_URL, BUILD_KIND, IS_INSECURE_TRANSPORT } from '../lib/config';
 import { ApiError } from '../lib/api';
 import { api, useSession } from '../state/session';
+import { ActivityScreen } from './ActivityScreen';
 
 /**
  * Settings.
@@ -21,6 +22,7 @@ export function SettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [showActivity, setShowActivity] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -35,6 +37,23 @@ export function SettingsScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The activity log is a whole screen of its own, so it takes over rather
+  // than being squeezed into a card between the device list and the build info.
+  if (showActivity) {
+    return (
+      <Screen>
+        <View style={styles.back}>
+          <Button
+            label="← Back to settings"
+            variant="ghost"
+            onPress={() => setShowActivity(false)}
+          />
+        </View>
+        <ActivityScreen />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -123,6 +142,13 @@ export function SettingsScreen() {
           })}
         </Card>
 
+        <Card
+          title="Security activity"
+          subtitle="Every sign-in, new device and refused permission on this account."
+        >
+          <Button label="View activity" variant="secondary" onPress={() => setShowActivity(true)} />
+        </Card>
+
         <Card title="About this build">
           <View style={styles.aboutRow}>
             <Text style={styles.aboutKey}>Build</Text>
@@ -150,6 +176,7 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   list: { gap: space[4], paddingBottom: space[10] },
+  back: { alignItems: 'flex-start' },
   device: { gap: space[2], paddingVertical: space[2] },
   deviceText: { gap: space[1] },
   deviceName: { color: colors.text, fontSize: fontSize.base },

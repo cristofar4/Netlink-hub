@@ -549,3 +549,550 @@ textarea {
     border-top-color: rgba(255, 255, 255, 0.28);
   }
 }
+
+/* ========================================================================= */
+/* Measuring instruments                                                     */
+/* ========================================================================= */
+
+/* ------------------------------------------------------------------------ */
+/* Radial gauge                                                              */
+/* ------------------------------------------------------------------------ */
+
+.nl-gauge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  flex: none;
+}
+
+.nl-gauge svg {
+  position: absolute;
+  inset: 0;
+  /* The ring is drawn clockwise from the bottom-left; the geometry assumes
+   * twelve o'clock is zero, which is what `describeArc` produces. */
+  overflow: visible;
+}
+
+.nl-gauge__track {
+  stroke: rgba(94, 132, 199, 0.16);
+  stroke-linecap: round;
+}
+
+.nl-gauge__value {
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 10px rgba(47, 107, 255, 0.5));
+  transition: stroke-dashoffset var(--nl-duration-slow) var(--nl-ease);
+}
+
+.nl-gauge--primary .nl-gauge__from {
+  stop-color: var(--nl-primary);
+}
+.nl-gauge--primary .nl-gauge__to {
+  stop-color: var(--nl-cyan);
+}
+.nl-gauge--cyan .nl-gauge__from {
+  stop-color: var(--nl-cyan);
+}
+.nl-gauge--cyan .nl-gauge__to {
+  stop-color: #7dd3fc;
+}
+.nl-gauge--success .nl-gauge__from {
+  stop-color: var(--nl-success);
+}
+.nl-gauge--success .nl-gauge__to {
+  stop-color: var(--nl-cyan);
+}
+.nl-gauge--warning .nl-gauge__from {
+  stop-color: var(--nl-warning);
+}
+.nl-gauge--warning .nl-gauge__to {
+  stop-color: #fde68a;
+}
+.nl-gauge--danger .nl-gauge__from {
+  stop-color: var(--nl-danger);
+}
+.nl-gauge--danger .nl-gauge__to {
+  stop-color: #fda4af;
+}
+
+.nl-gauge--warning .nl-gauge__value {
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.45));
+}
+.nl-gauge--danger .nl-gauge__value {
+  filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.45));
+}
+
+.nl-gauge__readout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  padding: 0 18%;
+}
+
+.nl-gauge__value-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.nl-gauge__unit {
+  font-size: var(--nl-text-lg);
+  font-weight: 600;
+  color: var(--nl-text-secondary);
+}
+
+.nl-gauge__caption {
+  font-size: var(--nl-text-base);
+  color: var(--nl-text-secondary);
+}
+
+.nl-gauge__footnote {
+  margin-top: 6px;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-muted);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Stat tile                                                                 */
+/* ------------------------------------------------------------------------ */
+
+.nl-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-4);
+  padding: var(--nl-space-5);
+  border-radius: var(--nl-radius-lg);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface);
+  text-align: left;
+  min-width: 0;
+}
+
+.nl-tile--button {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition:
+    border-color var(--nl-duration) var(--nl-ease),
+    background var(--nl-duration) var(--nl-ease),
+    transform var(--nl-duration) var(--nl-ease);
+}
+
+.nl-tile--button:hover {
+  border-color: var(--nl-border-strong);
+  background: var(--nl-surface-hover);
+  transform: translateY(-1px);
+}
+
+.nl-tile__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--nl-primary-hover);
+  background: var(--nl-primary-soft);
+  border: 1px solid rgba(47, 107, 255, 0.32);
+}
+
+.nl-tile--cyan .nl-tile__icon {
+  color: var(--nl-cyan);
+  background: var(--nl-cyan-faint);
+  border-color: var(--nl-cyan-dim);
+}
+.nl-tile--success .nl-tile__icon {
+  color: var(--nl-success);
+  background: var(--nl-success-soft);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.nl-tile--warning .nl-tile__icon {
+  color: var(--nl-warning);
+  background: var(--nl-warning-soft);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.nl-tile--danger .nl-tile__icon {
+  color: var(--nl-danger);
+  background: var(--nl-danger-soft);
+  border-color: rgba(244, 63, 94, 0.35);
+}
+
+.nl-tile__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nl-tile__label {
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+}
+
+.nl-tile__value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: var(--nl-text-2xl);
+  font-weight: 640;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.nl-tile__unit {
+  font-size: var(--nl-text-base);
+  font-weight: 600;
+  color: var(--nl-text-secondary);
+}
+
+.nl-tile__detail {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Bar chart                                                                 */
+/* ------------------------------------------------------------------------ */
+
+.nl-chart {
+  margin: 0;
+  min-width: 0;
+}
+
+.nl-chart__frame {
+  display: flex;
+  gap: var(--nl-space-3);
+}
+
+.nl-chart__axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: none;
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  /* Half a line, so each label sits on its gridline rather than above it. */
+  transform: translateY(-0.5em);
+}
+
+.nl-chart__plot {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.nl-chart__grid {
+  display: block;
+  height: 1px;
+  background: rgba(94, 132, 199, 0.14);
+}
+
+.nl-chart__bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.nl-chart__slot {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 2px;
+}
+
+.nl-chart__bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--nl-cyan), var(--nl-primary));
+  transition: height var(--nl-duration-slow) var(--nl-ease);
+}
+
+.nl-chart__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-muted);
+}
+
+.nl-chart__labels {
+  display: flex;
+  gap: 2px;
+  margin-top: var(--nl-space-2);
+  /* Lines up with the plot, which is offset by the axis column. */
+  padding-left: calc(var(--nl-space-3) + 3.4em);
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.nl-chart__label {
+  flex: 1;
+  min-width: 2px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Sparkline                                                                 */
+/* ------------------------------------------------------------------------ */
+
+.nl-spark {
+  margin: 0;
+  width: 100%;
+}
+
+.nl-spark svg {
+  width: 100%;
+  display: block;
+}
+
+.nl-spark__grid {
+  stroke: rgba(94, 132, 199, 0.16);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.nl-spark__line {
+  fill: none;
+  stroke: var(--nl-cyan);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nl-spark--primary .nl-spark__line {
+  stroke: var(--nl-primary-hover);
+}
+.nl-spark--success .nl-spark__line {
+  stroke: var(--nl-success);
+}
+.nl-spark--warning .nl-spark__line {
+  stroke: var(--nl-warning);
+}
+.nl-spark--danger .nl-spark__line {
+  stroke: var(--nl-danger);
+}
+
+.nl-spark__trailing {
+  margin-top: 4px;
+  text-align: right;
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Meter                                                                     */
+/* ------------------------------------------------------------------------ */
+
+.nl-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nl-meter__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--nl-space-3);
+  font-size: var(--nl-text-sm);
+}
+
+.nl-meter__label {
+  color: var(--nl-text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nl-meter__value {
+  color: var(--nl-text);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.nl-meter__track {
+  height: 6px;
+  border-radius: var(--nl-radius-pill);
+  background: rgba(94, 132, 199, 0.18);
+  overflow: hidden;
+}
+
+.nl-meter__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--nl-primary);
+  transition: width var(--nl-duration-slow) var(--nl-ease);
+}
+
+.nl-meter__track--cyan .nl-meter__fill {
+  background: var(--nl-cyan);
+}
+.nl-meter__track--success .nl-meter__fill {
+  background: var(--nl-success);
+}
+.nl-meter__track--warning .nl-meter__fill {
+  background: var(--nl-warning);
+}
+.nl-meter__track--danger .nl-meter__fill {
+  background: var(--nl-danger);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Toggle                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.nl-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-3) 0;
+}
+
+.nl-toggle__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  flex: none;
+  color: var(--nl-text-secondary);
+}
+
+.nl-toggle__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nl-toggle__label {
+  font-size: var(--nl-text-base);
+}
+
+.nl-toggle__description {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.nl-toggle__state {
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-muted);
+  flex: none;
+}
+
+.nl-toggle__state--on {
+  color: var(--nl-success);
+}
+
+.nl-toggle__switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--nl-border);
+  border-radius: var(--nl-radius-pill);
+  background: var(--nl-surface-sunken);
+  cursor: pointer;
+  transition:
+    background var(--nl-duration) var(--nl-ease),
+    border-color var(--nl-duration) var(--nl-ease);
+}
+
+.nl-toggle__switch[aria-checked='true'] {
+  background: var(--nl-primary);
+  border-color: var(--nl-primary);
+}
+
+.nl-toggle__switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nl-toggle__knob {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translateY(-50%);
+  box-shadow: var(--nl-shadow-sm);
+  transition: left var(--nl-duration) var(--nl-ease);
+}
+
+.nl-toggle__switch[aria-checked='true'] .nl-toggle__knob {
+  left: 23px;
+}
+
+/* In forced-colours mode the fill disappears, so the knob position is the
+ * only remaining cue — the border makes it legible against the ground. */
+@media (forced-colors: active) {
+  .nl-toggle__knob {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Sub navigation                                                            */
+/* ------------------------------------------------------------------------ */
+
+.nl-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-1);
+}
+
+.nl-subnav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  width: 100%;
+  padding: var(--nl-space-3) var(--nl-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--nl-radius);
+  background: transparent;
+  color: var(--nl-text-secondary);
+  font-size: var(--nl-text-base);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--nl-duration) var(--nl-ease),
+    color var(--nl-duration) var(--nl-ease);
+}
+
+.nl-subnav__item:hover {
+  background: var(--nl-surface-hover);
+  color: var(--nl-text);
+}
+
+.nl-subnav__item--active {
+  background: var(--nl-primary-soft);
+  border-color: rgba(47, 107, 255, 0.35);
+  color: var(--nl-text);
+}
+
+.nl-subnav__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: currentColor;
+}

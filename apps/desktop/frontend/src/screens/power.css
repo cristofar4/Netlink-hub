@@ -145,3 +145,198 @@
   color: var(--nl-text-muted);
   line-height: 1.5;
 }
+
+/* ------------------------------------------------------------------------ */
+/* The wake pair                                                             */
+/* ------------------------------------------------------------------------ */
+
+.power__pair {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-4);
+  margin: var(--nl-space-5) 0;
+  padding: var(--nl-space-5);
+  border-radius: var(--nl-radius-lg);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+}
+
+.power__pair-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  width: 150px;
+  text-align: center;
+}
+
+.power__pair-disc {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nl-border);
+  background: rgba(10, 18, 38, 0.9);
+  color: var(--nl-text-muted);
+}
+
+.power__pair-node--online .power__pair-disc {
+  border-color: rgba(52, 211, 153, 0.55);
+  color: #9dc0ff;
+  box-shadow: 0 0 18px rgba(47, 107, 255, 0.28);
+}
+
+.power__pair-name {
+  font-size: var(--nl-text-sm);
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.power__pair-state {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.power__pair-node--online .power__pair-state {
+  color: var(--nl-success);
+}
+
+/* The path between them: solid when a helper can actually reach the target,
+ * dashed when there is nothing to carry the packet. */
+.power__pair-link {
+  position: relative;
+  flex: 1;
+  min-width: 60px;
+  height: 2px;
+  background-image: linear-gradient(90deg, var(--nl-offline) 50%, transparent 50%);
+  background-size: 10px 2px;
+  background-repeat: repeat-x;
+}
+
+.power__pair-link--live {
+  background-image: linear-gradient(90deg, var(--nl-cyan) 50%, transparent 50%);
+  animation: power-flow var(--nl-flow-duration) linear infinite;
+}
+
+@keyframes power-flow {
+  to {
+    background-position-x: 20px;
+  }
+}
+
+.power__pair-link-label {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Power activity                                                            */
+/* ------------------------------------------------------------------------ */
+
+.power__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.power__event {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-3) 0;
+  border-bottom: 1px solid var(--nl-border);
+}
+
+.power__event:last-child {
+  border-bottom: none;
+}
+
+.power__event-mark {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--nl-offline);
+}
+
+.power__event--succeeded .power__event-mark {
+  background: var(--nl-success);
+}
+
+.power__event--failed .power__event-mark {
+  background: var(--nl-danger);
+}
+
+.power__event--cancelled .power__event-mark {
+  background: var(--nl-warning);
+}
+
+.power__event-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.power__event-title {
+  font-size: var(--nl-text-sm);
+}
+
+.power__event-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-2);
+  flex-wrap: wrap;
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+.power__event-time {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  flex: none;
+  white-space: nowrap;
+}
+
+.power__footnote {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .power__pair {
+    flex-direction: column;
+  }
+
+  .power__pair-link {
+    width: 2px;
+    height: 44px;
+    background-image: linear-gradient(180deg, var(--nl-offline) 50%, transparent 50%);
+    background-size: 2px 10px;
+    background-repeat: repeat-y;
+  }
+
+  .power__pair-link--live {
+    background-image: linear-gradient(180deg, var(--nl-cyan) 50%, transparent 50%);
+    animation: none;
+  }
+
+  .power__pair-link-label {
+    display: none;
+  }
+}

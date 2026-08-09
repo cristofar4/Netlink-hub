@@ -207,3 +207,88 @@ export function statusFromHeartbeat(
   const age = (now.getTime() - last.getTime()) / 1000;
   return age <= AGENT_OFFLINE_AFTER_SECONDS ? 'online' : 'offline';
 }
+
+// ---------------------------------------------------------------------------
+// Space overview
+// ---------------------------------------------------------------------------
+
+/**
+ * One checked fact behind the network health score.
+ *
+ * Health is not a mood. Every point in the score comes from a signal that was
+ * actually evaluated against the database, and each one carries the sentence
+ * the UI shows when it fails, so a low score can always be explained rather
+ * than merely displayed.
+ */
+export type HealthSignal = {
+  id: HealthSignalId;
+  label: string;
+  ok: boolean;
+  /** Why this signal passed or failed, in the words the owner reads. */
+  detail: string;
+  /** Points this signal contributes when it passes. The weights total 100. */
+  weight: number;
+};
+
+export const HEALTH_SIGNAL_IDS = [
+  'computers.online',
+  'wake.helper',
+  'data.connected',
+  'data.remaining',
+  'resources.shared',
+  'security.clean',
+] as const;
+export type HealthSignalId = (typeof HEALTH_SIGNAL_IDS)[number];
+
+/**
+ * The weights, in one place so the score and its explanation cannot drift.
+ *
+ * A computer you can reach is most of what a Space is for, so it carries the
+ * largest share. Security events come next: a run of denials matters more than
+ * a printer nobody shared.
+ */
+export const HEALTH_SIGNAL_WEIGHTS: Readonly<Record<HealthSignalId, number>> = {
+  'computers.online': 30,
+  'security.clean': 20,
+  'data.connected': 15,
+  'data.remaining': 15,
+  'wake.helper': 10,
+  'resources.shared': 10,
+};
+
+/** How far back `security.clean` looks for denied or failed events. */
+export const HEALTH_SECURITY_WINDOW_HOURS = 24;
+/** Below this share of the balance, `data.remaining` fails. */
+export const HEALTH_DATA_REMAINING_FLOOR = 0.1;
+
+export type SpaceOverview = {
+  spaceId: string;
+  spaceName: string;
+  isOwner: boolean;
+  agentCount: number;
+  onlineAgentCount: number;
+  folderCount: number;
+  printerCount: number;
+  memberCount: number;
+  /** Remote desktop sessions that are connecting or live right now. */
+  activeSessionCount: number;
+  /** Null when this Space has no Data Pool, or the caller may not manage it. */
+  data: {
+    isDemo: boolean;
+    balanceBytes: string;
+    usedBytes: string;
+    remainingBytes: string;
+    /** Null when there is no usage history to project from. */
+    projectedDaysRemaining: number | null;
+  } | null;
+  health: {
+    /** 0–100: the summed weights of every signal that passed. */
+    score: number;
+    signals: HealthSignal[];
+  };
+};
+
+/** Sums the passing signals. Kept here so both sides score a Space alike. */
+export function healthScore(signals: readonly HealthSignal[]): number {
+  return signals.reduce((total, signal) => (signal.ok ? total + signal.weight : total), 0);
+}

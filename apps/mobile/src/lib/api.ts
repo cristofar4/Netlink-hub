@@ -1,3 +1,4 @@
+import { USAGE_HISTORY_DEFAULT_DAYS } from '@netlink/contracts';
 import type {
   AgentPowerState,
   AgentSummary,
@@ -8,6 +9,7 @@ import type {
   AuthenticatedUser,
   ChallengeResponse,
   DataPoolSummary,
+  DataUsageSeries,
   FileEntry,
   LoginResponse,
   MemberAccessRow,
@@ -17,6 +19,7 @@ import type {
   PowerCommandSummary,
   SessionTokens,
   SharedPrinter,
+  SpaceOverview,
   SpaceSummary,
 } from '@netlink/contracts';
 import { clearSession, readSecure, writeSecure } from './secure-store';
@@ -291,12 +294,21 @@ export class NetLinkApi {
     return this.request('GET', `/spaces/${spaceId}/printers`);
   }
 
+  /** Everything the home screen shows about a Space, in one request. */
+  overview(spaceId: string): Promise<SpaceOverview> {
+    return this.request('GET', `/spaces/${spaceId}/overview`);
+  }
+
   dataPool(spaceId: string): Promise<DataPoolSummary> {
     return this.request('GET', `/spaces/${spaceId}/data/pool`);
   }
 
   myAllocation(spaceId: string): Promise<MyAllocation> {
     return this.request('GET', `/spaces/${spaceId}/data/mine`);
+  }
+
+  dataUsage(spaceId: string, days = USAGE_HISTORY_DEFAULT_DAYS): Promise<DataUsageSeries> {
+    return this.request('GET', `/spaces/${spaceId}/data/usage?days=${days}`);
   }
 
   members(spaceId: string): Promise<MemberAccessRow[]> {

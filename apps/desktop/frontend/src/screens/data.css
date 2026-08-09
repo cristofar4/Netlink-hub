@@ -1,25 +1,188 @@
-.data__facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+/* --- Data Pool layout ---------------------------------------------------- */
+
+.data {
+  display: flex;
+  flex-direction: column;
   gap: var(--nl-space-5);
-  margin: var(--nl-space-6) 0 0;
 }
 
-.data__facts dt {
-  font-size: var(--nl-text-xs);
-  color: var(--nl-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.data__top {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: var(--nl-space-4);
+  align-items: stretch;
 }
 
-.data__facts dd {
-  margin: 4px 0 0;
-  font-size: var(--nl-text-xl);
-  font-weight: 700;
+.data__gauge-card {
+  display: grid;
+  place-items: center;
+  padding: var(--nl-space-6);
 }
 
-.data__fact-ok {
+.data__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--nl-space-4);
+}
+
+.data__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--nl-space-5);
+  align-items: start;
+}
+
+.data__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-5);
+  min-width: 0;
+}
+
+.data__split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--nl-space-5);
+}
+
+.data__lede {
+  font-size: var(--nl-text-sm);
+  line-height: 1.7;
+  color: var(--nl-text-secondary);
+}
+
+.data__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-3);
+  margin-top: var(--nl-space-4);
+}
+
+.data__window {
+  padding: 7px var(--nl-space-3);
+  border-radius: var(--nl-radius-sm);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+  color: var(--nl-text);
+  font-size: var(--nl-text-sm);
+}
+
+/* --- The connected account ---------------------------------------------- */
+
+.data__account {
+  display: flex;
+  align-items: center;
+  gap: var(--nl-space-3);
+  flex-wrap: wrap;
+}
+
+.data__account-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
   color: var(--nl-success);
+  background: var(--nl-success-soft);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.data__account-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.data__account-ref {
+  font-family: var(--nl-font-mono);
+  font-size: var(--nl-text-sm);
+  color: var(--nl-text-secondary);
+}
+
+/* --- Members ------------------------------------------------------------- */
+
+.data__members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
+}
+
+.data__member {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nl-space-3);
+  padding: var(--nl-space-3);
+  border-radius: var(--nl-radius);
+  border: 1px solid var(--nl-border);
+  background: var(--nl-surface-sunken);
+}
+
+.data__member-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: var(--nl-text-sm);
+  font-weight: 650;
+}
+
+.data__member-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.data__member-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--nl-space-3);
+  font-size: var(--nl-text-sm);
+}
+
+.data__member-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+}
+
+.data__member-role {
+  color: var(--nl-text-muted);
+  font-weight: 400;
+}
+
+.data__member-figure {
+  flex: none;
+  color: var(--nl-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.data__member-status {
+  font-size: var(--nl-text-xs);
+  color: var(--nl-warning);
+}
+
+/* --- Passes -------------------------------------------------------------- */
+
+.data__passes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nl-space-4);
 }
 
 .data__pass {
@@ -34,6 +197,24 @@
 .data__pass:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+.data__pass-detail {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.data__pass-meta {
+  margin-top: 4px;
+  font-size: var(--nl-text-xs);
+  color: var(--nl-text-muted);
+}
+
+@media (max-width: 1180px) {
+  .data__top,
+  .data__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* --- Usage meter --------------------------------------------------------- */

@@ -7,16 +7,22 @@ import {
 } from '@nestjs/common';
 import {
   DATA_ONLY_PERMISSIONS,
+  USAGE_HISTORY_MAX_DAYS,
+  USAGE_HISTORY_MIN_DAYS,
+  evaluatePermission,
   remainingBytes,
   type CreatePassRequest,
   type DataPoolSummary,
   type DataProviderAdapter,
+  type DataUsageSeries,
   type MemberAccessRow,
   type MyAllocation,
   type PassSummary,
   type Permission,
   type UpdateAllocationRequest,
+  type UsageBucket,
 } from '@netlink/contracts';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { TokenService } from '../crypto/token.service';
@@ -406,6 +412,78 @@ export class DataService {
     };
   }
 
+  /**
+   * Daily usage over a window, for the chart on the Data Pool screen.
+   *
+   * Two different questions share this one endpoint, answered by what the
+   * caller holds: someone who manages the pool sees the whole Space, and a
+   * member who merely uses data sees their own allocation and no one else's.
+   * The grant is read once and evaluated locally rather than asked for twice,
+   * so opening the screen as a member does not write a denial to the audit log
+   * on every load.
+   *
+   * The aggregation happens in the database. Pulling every usage event into the
+   * process to add them up would work today and stop working at exactly the
+   * scale where the chart becomes interesting.
+   */
+  async usageSeries(userId: string, spaceId: string, days: number): Promise<DataUsageSeries> {
+    const grant = await this.spaces.grantFor(userId, spaceId);
+    if (!grant) throw new NotFoundException('That Space was not found.');
+
+    const managesPool = evaluatePermission(grant, 'data.manage').allowed;
+    const usesData = evaluatePermission(grant, 'data.use').allowed;
+    if (!managesPool && !usesData) {
+      throw new ForbiddenException('You do not have access to data usage in this Space.');
+    }
+
+    const window = Math.min(
+      Math.max(Math.trunc(days), USAGE_HISTORY_MIN_DAYS),
+      USAGE_HISTORY_MAX_DAYS,
+    );
+    const today = startOfUtcDay(new Date());
+    const from = new Date(today.getTime() - (window - 1) * DAY_MS);
+
+    const allocations = await this.prisma.dataAllocation.findMany({
+      where: managesPool ? { spaceId } : { spaceId, member: { userId } },
+      select: { id: true },
+    });
+
+    const totals = new Map<string, bigint>();
+    if (allocations.length > 0) {
+      const rows = await this.prisma.$queryRaw<Array<{ day: Date; bytes: string }>>`
+        SELECT date_trunc('day', "occurredAt") AS day, SUM("bytes")::text AS bytes
+        FROM data_usage_events
+        WHERE "allocationId" IN (${Prisma.join(allocations.map((a) => a.id))})
+          AND "occurredAt" >= ${from}
+        GROUP BY 1
+      `;
+      for (const row of rows) totals.set(isoDay(row.day), BigInt(row.bytes));
+    }
+
+    // Every day in the window is emitted, including the empty ones: a chart
+    // that drops quiet days shows a busy fortnight and a quiet month alike.
+    const buckets: UsageBucket[] = [];
+    let total = 0n;
+    let peak = 0n;
+    for (let index = 0; index < window; index += 1) {
+      const day = isoDay(new Date(from.getTime() + index * DAY_MS));
+      const bytes = totals.get(day) ?? 0n;
+      total += bytes;
+      if (bytes > peak) peak = bytes;
+      buckets.push({ day, bytes: bytes.toString() });
+    }
+
+    return {
+      spaceId,
+      fromDay: buckets[0]?.day ?? isoDay(from),
+      toDay: buckets[buckets.length - 1]?.day ?? isoDay(today),
+      buckets,
+      totalBytes: total.toString(),
+      peakBytes: peak.toString(),
+      dailyAverageBytes: (total / BigInt(window)).toString(),
+    };
+  }
+
   /** The owner's Member Access page. */
   async memberAccess(userId: string, spaceId: string): Promise<MemberAccessRow[]> {
     await this.spaces.requirePermission(userId, spaceId, 'members.manage');
@@ -725,6 +803,24 @@ function toPassSummary(invitation: InvitationRow): PassSummary {
 
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The usage chart buckets by UTC day rather than by the server's local day.
+ *
+ * A daily *limit* is a promise to the person using the data, so it resets on
+ * their day — that is `startOfDay` above. A chart is a record of what happened,
+ * and it has to bucket the same way whichever machine renders it, so it uses
+ * UTC. The two are deliberately different, not an inconsistency.
+ */
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function isoDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 function maskAccount(ref: string): string {

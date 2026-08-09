@@ -3,9 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontSize, radius, space, touchTarget } from '../theme/tokens';
 import { SHOW_DATA_POOL } from '../lib/config';
+import { HomeScreen } from './HomeScreen';
+import { DataPoolScreen } from './DataPoolScreen';
+import { RemoteAccessScreen } from './RemoteAccessScreen';
 import { PowerScreen } from './PowerScreen';
-import { SpacesScreen } from './SpacesScreen';
-import { ActivityScreen } from './ActivityScreen';
 import { SettingsScreen } from './SettingsScreen';
 
 /**
@@ -14,42 +15,60 @@ import { SettingsScreen } from './SettingsScreen';
  * Four tabs, not ten. The desktop has ten sections because it is a control
  * surface someone sits in front of; a phone is something they pull out to do
  * one thing — usually "turn the computer at home on". Everything that does not
- * earn a permanent place on a five-tab bar lives inside My Spaces.
+ * earn a permanent place on the bar is reachable from Home.
  *
- * A hand-rolled tab bar rather than a navigation library: four fixed
+ * A hand-rolled tab bar rather than a navigation library: a handful of fixed
  * destinations with no stacks, no deep links and no history is not a routing
  * problem, and a router would be more dependency than the whole shell.
+ *
+ * Power is not a tab of its own. It is where Remote Access and Home send you,
+ * which keeps the bar to the four things people come here for while leaving the
+ * most-used action one press from either.
  */
 
-const TABS = [
-  { id: 'spaces', label: 'Spaces', icon: '◈' },
-  { id: 'power', label: 'Power', icon: '⏻' },
-  { id: 'activity', label: 'Activity', icon: '☰' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
-] as const;
+type TabId = 'home' | 'data' | 'remote' | 'settings';
+type ScreenId = TabId | 'power';
 
-type TabId = (typeof TABS)[number]['id'];
+const ALL_TABS: Array<{ id: TabId; label: string; icon: string }> = [
+  { id: 'home', label: 'Home', icon: '⌂' },
+  // Hidden in release builds: the only provider today is a Demo Provider whose
+  // usage is generated, and shipping simulated network usage to a store would
+  // misrepresent what the app does. See lib/config.ts.
+  { id: 'data', label: 'Data Pool', icon: '◔' },
+  { id: 'remote', label: 'Remote', icon: '▭' },
+  { id: 'settings', label: 'Settings', icon: '⚙' },
+];
 
 export function Shell() {
-  const [tab, setTab] = useState<TabId>('spaces');
+  const [screen, setScreen] = useState<ScreenId>('home');
   const insets = useSafeAreaInsets();
+
+  const tabs = ALL_TABS.filter((tab) => tab.id !== 'data' || SHOW_DATA_POOL);
+  // Power is opened from another tab, so the bar keeps Remote highlighted
+  // rather than showing nothing selected.
+  const activeTab: TabId = screen === 'power' ? 'remote' : screen;
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.body}>
-        {tab === 'spaces' && <SpacesScreen onOpenPower={() => setTab('power')} />}
-        {tab === 'power' && <PowerScreen />}
-        {tab === 'activity' && <ActivityScreen />}
-        {tab === 'settings' && <SettingsScreen />}
+        {screen === 'home' && (
+          <HomeScreen
+            onOpenTab={(tab) => setScreen(tab === 'data' && !SHOW_DATA_POOL ? 'home' : tab)}
+          />
+        )}
+        {screen === 'data' && <DataPoolScreen />}
+        {screen === 'remote' && <RemoteAccessScreen onOpenPower={() => setScreen('power')} />}
+        {screen === 'power' && <PowerScreen />}
+        {screen === 'settings' && <SettingsScreen />}
       </View>
 
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, space[2]) }]}>
-        {TABS.map((entry) => {
-          const selected = entry.id === tab;
+        {tabs.map((entry) => {
+          const selected = entry.id === activeTab;
           return (
             <Pressable
               key={entry.id}
-              onPress={() => setTab(entry.id)}
+              onPress={() => setScreen(entry.id)}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               accessibilityLabel={entry.label}

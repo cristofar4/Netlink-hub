@@ -291,3 +291,58 @@ export function percentUsed(total: string, used: string): number {
   const percent = Number((BigInt(used) * 10000n) / totalValue) / 100;
   return Math.min(Math.max(percent, 0), 100);
 }
+
+// ---------------------------------------------------------------------------
+// Usage history
+// ---------------------------------------------------------------------------
+
+/**
+ * One day of metered usage.
+ *
+ * `day` is a calendar date in UTC (`YYYY-MM-DD`). Every day in the requested
+ * window is present, including the ones with no usage at all — a chart that
+ * silently drops empty days would show a busy week and a quiet week as the
+ * same shape.
+ */
+export type UsageBucket = {
+  day: string;
+  bytes: string;
+};
+
+/** How many days of history the usage endpoint will return in one request. */
+export const USAGE_HISTORY_MIN_DAYS = 1;
+export const USAGE_HISTORY_MAX_DAYS = 90;
+export const USAGE_HISTORY_DEFAULT_DAYS = 30;
+
+export type DataUsageSeries = {
+  spaceId: string;
+  /** Inclusive first day and last day of the window, both `YYYY-MM-DD` UTC. */
+  fromDay: string;
+  toDay: string;
+  buckets: UsageBucket[];
+  totalBytes: string;
+  /** The largest single day in the window, so a chart can scale its axis. */
+  peakBytes: string;
+  /**
+   * Mean bytes per day over the whole window, empty days included. This is the
+   * figure the projection below divides by, so the two always agree.
+   */
+  dailyAverageBytes: string;
+};
+
+/**
+ * How long the remaining data lasts at the recent average rate.
+ *
+ * Returns `null` when there is nothing to go on — no usage recorded, or no
+ * remaining balance — rather than a number that looks like a measurement but
+ * is really a guess.
+ */
+export function projectDaysRemaining(
+  remaining: string | bigint,
+  dailyAverage: string | bigint,
+): number | null {
+  const left = typeof remaining === 'bigint' ? remaining : BigInt(remaining);
+  const perDay = typeof dailyAverage === 'bigint' ? dailyAverage : BigInt(dailyAverage);
+  if (perDay <= 0n || left <= 0n) return null;
+  return Math.floor(Number(left / perDay));
+}

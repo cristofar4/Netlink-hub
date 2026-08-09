@@ -7,10 +7,14 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  USAGE_HISTORY_DEFAULT_DAYS,
+  USAGE_HISTORY_MAX_DAYS,
+  USAGE_HISTORY_MIN_DAYS,
   claimPassRequestSchema,
   createPassRequestSchema,
   updateAllocationRequestSchema,
@@ -28,6 +32,19 @@ import { DataService } from './data.service';
 const connectPoolSchema = z.object({
   accountRef: z.string().trim().min(4).max(64),
 });
+/**
+ * How many days of history to return.
+ *
+ * A chart's window is a display preference, not an instruction that can be
+ * wrong: an out-of-range number is clamped to what the endpoint will serve, and
+ * a missing or unparseable one falls back to the default. Refusing the whole
+ * request would blank the screen over a query string.
+ */
+const usageDaysSchema = z.coerce
+  .number()
+  .int()
+  .catch(USAGE_HISTORY_DEFAULT_DAYS)
+  .transform((days) => Math.min(Math.max(days, USAGE_HISTORY_MIN_DAYS), USAGE_HISTORY_MAX_DAYS));
 const pauseSchema = z.object({ paused: z.boolean() });
 
 @ApiTags('data')
@@ -75,6 +92,20 @@ export class DataController {
     @Param('spaceId', ParseUUIDPipe) spaceId: string,
   ) {
     return this.data.myAllocation(principal.userId, spaceId);
+  }
+
+  @Get('usage')
+  @ApiOperation({
+    summary: 'Daily usage history',
+    description:
+      'One bucket per calendar day (UTC), empty days included. Someone who manages the pool sees the whole Space; a member sees only their own allocation.',
+  })
+  usage(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('spaceId', ParseUUIDPipe) spaceId: string,
+    @Query('days', new ZodValidationPipe(usageDaysSchema)) days: number,
+  ) {
+    return this.data.usageSeries(principal.userId, spaceId, days);
   }
 
   @Get('members')

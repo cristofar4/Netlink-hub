@@ -1,3 +1,4 @@
+import { USAGE_HISTORY_DEFAULT_DAYS } from '@netlink/contracts';
 import type {
   AgentPowerState,
   AgentSummary,
@@ -6,6 +7,7 @@ import type {
   CreatePassRequest,
   CreateRemoteSessionRequest,
   DataPoolSummary,
+  DataUsageSeries,
   MemberAccessRow,
   MyAllocation,
   PassSummary,
@@ -32,6 +34,7 @@ import type {
   LoginResponse,
   ResourceSummary,
   SessionTokens,
+  SpaceOverview,
   SpaceSummary,
 } from '@netlink/contracts';
 
@@ -229,6 +232,21 @@ export class NetLinkApi {
     return this.request('GET', `/spaces/${spaceId}/data/mine`);
   }
 
+  /**
+   * Daily usage for the chart.
+   *
+   * The server decides what a caller may see — the whole Space, or only their
+   * own allocation — so the same call serves an owner and a member.
+   */
+  dataUsage(spaceId: string, days = USAGE_HISTORY_DEFAULT_DAYS): Promise<DataUsageSeries> {
+    return this.request('GET', `/spaces/${spaceId}/data/usage?days=${days}`);
+  }
+
+  /** Everything the Overview screen shows, in one consistent read. */
+  spaceOverview(spaceId: string): Promise<SpaceOverview> {
+    return this.request('GET', `/spaces/${spaceId}/overview`);
+  }
+
   memberAccess(spaceId: string): Promise<MemberAccessRow[]> {
     return this.request('GET', `/spaces/${spaceId}/data/members`);
   }
@@ -422,6 +440,32 @@ export class NetLinkApi {
 
   health(): Promise<{ status: string; components: Record<string, { status: string }> }> {
     return this.request('GET', '/health', { auth: false });
+  }
+
+  /**
+   * Round trip to the control plane, in milliseconds.
+   *
+   * A real measurement of a real request, taken here rather than reported by
+   * the server — what matters to someone watching the dashboard is how far away
+   * the service is from *them*. The liveness endpoint is used because it
+   * touches no database, so this times the network rather than a query.
+   *
+   * Returns null when the request fails: no answer is not the same as a fast
+   * one, and showing the last good figure would be worse than showing none.
+   */
+  async pingLatencyMs(): Promise<number | null> {
+    const started = performance.now();
+    try {
+      const response = await fetch(`${this.baseUrl}/health/live`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!response.ok) return null;
+      return Math.round(performance.now() - started);
+    } catch {
+      return null;
+    }
   }
 
   // -------------------------------------------------------------------------
