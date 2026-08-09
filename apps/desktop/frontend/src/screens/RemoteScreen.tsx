@@ -25,6 +25,7 @@ import {
   type SpaceSummary,
 } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 import { RemoteViewer, buttonName, normalisePointer } from '../lib/remote';
 import type { SectionId } from './sections';
 import './remote.css';
@@ -49,6 +50,7 @@ export function RemoteScreen({
   space: SpaceSummary | null;
   onNavigate: (section: SectionId) => void;
 }) {
+  const brand = useBrandName();
   const [computers, setComputers] = useState<AgentSummary[] | null>(null);
   const [resources, setResources] = useState<ResourceSummary[]>([]);
   const [members, setMembers] = useState<MemberAccessRow[]>([]);
@@ -163,7 +165,7 @@ export function RemoteScreen({
         <div>
           <strong>Sessions are end-to-end encrypted</strong>
           <p>
-            Screens, keystrokes and files travel directly between your devices. NetLink records that
+            Screens, keystrokes and files travel directly between your devices. {brand} records that
             a session happened — never what was on the screen.
           </p>
         </div>
@@ -209,7 +211,7 @@ export function RemoteScreen({
             {computers.length === 0 && folders.length === 0 && printers.length === 0 ? (
               <EmptyState
                 title="Nothing to reach yet"
-                description="Install the NetLink agent on the computer you want to reach, then enrol it from the Overview screen."
+                description={`Install the ${brand} agent on the computer you want to reach, then enrol it from the Overview screen.`}
               />
             ) : (
               <div className="remote__resources">
@@ -220,7 +222,7 @@ export function RemoteScreen({
                     </div>
                     <h3 className="remote__resource-name">{agent.name}</h3>
                     <p className="remote__resource-detail">
-                      {agent.appVersion ? `NetLink agent ${agent.appVersion}` : 'NetLink agent'}
+                      {agent.appVersion ? `${brand} agent ${agent.appVersion}` : `${brand} agent`}
                     </p>
                     <StatusDot
                       tone={agent.status === 'online' ? 'online' : 'offline'}
@@ -441,6 +443,7 @@ function RemoteStage({
   onLeave: () => Promise<void>;
   onNavigate: (section: SectionId) => void;
 }) {
+  const brand = useBrandName();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<RemoteViewer | null>(null);
@@ -692,8 +695,8 @@ function RemoteStage({
           </Card>
 
           <p className="stage__note">
-            Ends automatically in {formatDuration(remaining)}. Nothing on this screen passes through
-            NetLink&rsquo;s servers.
+            Ends automatically in {formatDuration(remaining)}. Nothing on this screen passes through{' '}
+            {brand}&rsquo;s servers.
           </p>
         </aside>
       </div>

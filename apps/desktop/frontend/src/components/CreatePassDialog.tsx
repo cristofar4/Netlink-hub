@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Badge, Button, Input } from '@netlink/ui';
 import { GIGABYTE, formatBytes, type PassSummary } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 
 /**
  * Create a NetLink Pass.
@@ -24,6 +25,7 @@ export function CreatePassDialog({
   onClose: () => void;
   onCreated: (pass: PassSummary) => void;
 }) {
+  const brand = useBrandName();
   const [email, setEmail] = useState('');
   const [useEmail, setUseEmail] = useState(true);
   const [totalGb, setTotalGb] = useState('5');
@@ -99,7 +101,7 @@ export function CreatePassDialog({
           <div className="nl-stack" style={{ gap: 16 }}>
             <p className="nl-muted" style={{ fontSize: 'var(--nl-text-sm)', lineHeight: 1.6 }}>
               Send this link to {created.inviteeEmail ?? 'the person you want to share with'}. They
-              accept it with their own NetLink account. It works once and expires{' '}
+              accept it with their own {brand} account. It works once and expires{' '}
               {new Date(created.expiresAt).toLocaleDateString()}.
             </p>
 
@@ -146,7 +148,7 @@ export function CreatePassDialog({
                 <span>
                   <strong>Send to an email address</strong>
                   <span className="dialog__hint">
-                    Only that NetLink account can accept the Pass.
+                    Only that {brand} account can accept the Pass.
                   </span>
                 </span>
               </label>

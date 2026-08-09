@@ -15,7 +15,7 @@ Your phone and your PC must be on the same Wi-Fi network.
 ```powershell
 git clone https://github.com/cristofar4/Netlink-hub.git
 cd Netlink-hub
-git checkout claude/beautiful-planck-pyfb3g
+git checkout claude/app-rebuild-g5evlg
 .\scripts\setup-windows.ps1
 ```
 
@@ -149,11 +149,31 @@ Write down four things — you need them in step 2:
 SMTP_HOST       e.g. smtp-relay.brevo.com
 SMTP_USER       the login they show you
 SMTP_PASSWORD   the key they show you (shown once)
-MAIL_FROM       NetLink <you@yourdomain.com>
+MAIL_FROM       Your Company <you@yourdomain.com>
 ```
 
 `MAIL_FROM` has to be an address the provider has verified. Using an
 unverified one is the most common reason the first sign-in code never arrives.
+The API refuses to start in production while it is still the development
+default, because that address is on a domain that does not exist.
+
+### Make the emails yours
+
+The verification codes are the only messages this product sends, and they are
+the most phishable thing about it — short, urgent, and asking for an action. The
+defence is that the real one is recognisable, so set the name people will see:
+
+```
+BRAND_NAME            Your Company
+BRAND_URL             https://yourcompany.com          (optional)
+BRAND_SUPPORT_EMAIL   help@yourcompany.com             (optional)
+BRAND_FOOTER          Your Company Ltd, Lagos          (optional)
+```
+
+`BRAND_NAME` appears in every subject line, in the body and in the footer — and
+the apps read it from the server too, so the name on the sign-in screen is the
+same one in the inbox. That match is what somebody checks before typing a code
+in. Make it agree with the domain in `MAIL_FROM`.
 
 ---
 
@@ -195,7 +215,7 @@ This is the part that makes the Space non-empty.
 ```powershell
 git clone https://github.com/cristofar4/Netlink-hub.git
 cd Netlink-hub
-git checkout claude/beautiful-planck-pyfb3g
+git checkout claude/app-rebuild-g5evlg
 
 .\scripts\setup-windows.ps1
 ```

@@ -7,6 +7,7 @@ import { API_URL, BUILD_KIND, IS_INSECURE_TRANSPORT } from '../lib/config';
 import { ApiError } from '../lib/api';
 import { api, useSession } from '../state/session';
 import { ActivityScreen } from './ActivityScreen';
+import { useBrandName } from '../state/brand';
 
 /**
  * Settings.
@@ -17,6 +18,7 @@ import { ActivityScreen } from './ActivityScreen';
  * device is refused the moment it happens.
  */
 export function SettingsScreen() {
+  const brand = useBrandName();
   const { session } = useSession();
   const [devices, setDevices] = useState<AuthenticatedDevice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -165,7 +167,7 @@ export function SettingsScreen() {
             </Alert>
           )}
           <Text style={styles.about}>
-            NetLink never stores your password, your files, or anything on your screen. Files and
+            {brand} never stores your password, your files, or anything on your screen. Files and
             remote sessions go directly between your own devices.
           </Text>
         </Card>

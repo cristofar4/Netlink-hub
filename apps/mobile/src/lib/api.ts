@@ -7,6 +7,7 @@ import type {
   AuthSuccessResponse,
   AuthenticatedDevice,
   AuthenticatedUser,
+  BrandingResponse,
   ChallengeResponse,
   DataPoolSummary,
   DataUsageSeries,
@@ -235,6 +236,11 @@ export class NetLinkApi {
   // -------------------------------------------------------------------------
   // Spaces and devices
   // -------------------------------------------------------------------------
+
+  /** Who this installation says it is. Read before anyone has signed in. */
+  branding(): Promise<BrandingResponse> {
+    return this.request('GET', '/branding', { auth: false });
+  }
 
   spaces(): Promise<SpaceSummary[]> {
     return this.request('GET', '/spaces');

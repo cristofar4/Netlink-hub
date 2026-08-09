@@ -16,6 +16,7 @@ import { colors, fontSize, radius, space } from '../theme/tokens';
 import { ApiError } from '../lib/api';
 import { api } from '../state/session';
 import { useSpace } from '../state/space';
+import { useBrandName } from '../state/brand';
 import { splitAmount } from './HomeScreen';
 
 /**
@@ -28,6 +29,7 @@ import { splitAmount } from './HomeScreen';
  * and who is spending it.
  */
 export function DataPoolScreen() {
+  const brand = useBrandName();
   const { active } = useSpace();
   const [pool, setPool] = useState<DataPoolSummary | null>(null);
   const [mine, setMine] = useState<MyAllocation | null>(null);
@@ -115,7 +117,7 @@ export function DataPoolScreen() {
           <Card>
             <EmptyState
               title="No data shared with you"
-              description="Nobody has given you an allowance in this Space, and you do not manage its pool. Connect an account from the NetLink window on your computer."
+              description={`Nobody has given you an allowance in this Space, and you do not manage its pool. Connect an account from the ${brand} window on your computer.`}
             />
           </Card>
         </ScrollView>
@@ -159,7 +161,7 @@ export function DataPoolScreen() {
           >
             {members.filter((member) => member.allocation).length === 0 ? (
               <Text style={styles.body}>
-                Nobody has an allocation yet. Share data from the NetLink window on your computer.
+                Nobody has an allocation yet. Share data from the {brand} window on your computer.
               </Text>
             ) : (
               members
@@ -230,8 +232,8 @@ export function DataPoolScreen() {
 
         <Card title="Sharing more data">
           <Text style={styles.body}>
-            Creating a NetLink Pass — choosing an amount, a daily cap and an expiry — is done in the
-            NetLink window on your computer, where there is room to decide it properly.
+            Creating a {brand} Pass — choosing an amount, a daily cap and an expiry — is done in the{' '}
+            {brand} window on your computer, where there is room to decide it properly.
           </Text>
         </Card>
       </ScrollView>

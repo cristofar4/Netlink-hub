@@ -8,6 +8,7 @@ import {
   type Transfer,
 } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 import './files.css';
 
 /**
@@ -21,6 +22,7 @@ import './files.css';
  * the bytes move directly between the owner's own devices.
  */
 export function FilesScreen({ space }: { space: SpaceSummary | null }) {
+  const brand = useBrandName();
   const [folders, setFolders] = useState<ApprovedFolder[] | null>(null);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [agents, setAgents] = useState<AgentSummary[]>([]);
@@ -68,8 +70,8 @@ export function FilesScreen({ space }: { space: SpaceSummary | null }) {
       {notice && !error && <Alert tone="success">{notice}</Alert>}
 
       <Alert tone="info">
-        Only the folders you approve are visible in NetLink. Your whole drive is never exposed, and
-        file contents never pass through — or rest on — NetLink&rsquo;s servers.
+        Only the folders you approve are visible in {brand}. Your whole drive is never exposed, and
+        file contents never pass through — or rest on — {brand}&rsquo;s servers.
       </Alert>
 
       {folders.length === 0 ? (
@@ -123,7 +125,7 @@ export function FilesScreen({ space }: { space: SpaceSummary | null }) {
                   Delete “{confirmDelete.path}”?
                 </div>
                 <div style={{ fontSize: 'var(--nl-text-sm)', lineHeight: 1.6 }}>
-                  This permanently removes it from that computer. NetLink cannot undo it, and it
+                  This permanently removes it from that computer. {brand} cannot undo it, and it
                   does not go to the Recycle Bin.
                 </div>
                 <div className="nl-row" style={{ gap: 8, marginTop: 14 }}>
@@ -337,6 +339,7 @@ function ApproveFolderCard({
   onCancel: () => void;
   onApproved: (name: string) => Promise<void>;
 }) {
+  const brand = useBrandName();
   const [agentId, setAgentId] = useState(agents[0]?.id ?? '');
   const [name, setName] = useState('');
   const [path, setPath] = useState('');
@@ -375,7 +378,7 @@ function ApproveFolderCard({
       >
         {agents.length === 0 ? (
           <Alert tone="warning">
-            No computer has joined this Space yet. Connect the NetLink agent first.
+            No computer has joined this Space yet. Connect the {brand} agent first.
           </Alert>
         ) : (
           <label className="nl-field">
@@ -397,7 +400,7 @@ function ApproveFolderCard({
         )}
 
         <Input
-          label="Name in NetLink"
+          label={`Name in ${brand}`}
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Documents"

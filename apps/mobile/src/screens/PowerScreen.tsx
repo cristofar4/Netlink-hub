@@ -20,6 +20,7 @@ import { colors, fontSize, radius, space, touchTarget } from '../theme/tokens';
 import { ApiError } from '../lib/api';
 import { api } from '../state/session';
 import { useSpace } from '../state/space';
+import { useBrandName } from '../state/brand';
 
 /**
  * Device Power and Wake.
@@ -35,6 +36,7 @@ import { useSpace } from '../state/space';
  * control plane withholds the command from the agent until it elapses.
  */
 export function PowerScreen() {
+  const brand = useBrandName();
   const { active, loading: spaceLoading } = useSpace();
   const [states, setStates] = useState<AgentPowerState[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +140,7 @@ export function PowerScreen() {
           <Card>
             <EmptyState
               title="No computers here yet"
-              description="Install the NetLink agent on the computer you want to reach, then enrol it from the NetLink window on that machine."
+              description={`Install the ${brand} agent on the computer you want to reach, then enrol it from the ${brand} window on that machine.`}
             />
           </Card>
         )}

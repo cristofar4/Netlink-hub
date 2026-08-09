@@ -29,6 +29,7 @@ import type {
   AuthenticatedDevice,
   AuthenticatedUser,
   AuditPage,
+  BrandingResponse,
   ChallengeResponse,
   DeviceIdentity,
   LoginResponse,
@@ -436,6 +437,11 @@ export class NetLinkApi {
     const query = new URLSearchParams({ limit: String(limit) });
     if (cursor) query.set('cursor', cursor);
     return this.request('GET', `/activity?${query.toString()}`);
+  }
+
+  /** Who this installation says it is. Read before anyone has signed in. */
+  branding(): Promise<BrandingResponse> {
+    return this.request('GET', '/branding', { auth: false });
   }
 
   health(): Promise<{ status: string; components: Record<string, { status: string }> }> {

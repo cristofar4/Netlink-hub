@@ -28,6 +28,7 @@ import {
   type SpaceSummary,
 } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 import { CreatePassDialog } from '../components/CreatePassDialog';
 import { UsageBar } from '../components/UsageBar';
 import './data.css';
@@ -48,6 +49,7 @@ const WINDOWS = [
  * asks for what it is entitled to and renders whichever answer it gets.
  */
 export function DataPoolScreen({ space }: { space: SpaceSummary | null }) {
+  const brand = useBrandName();
   const [pool, setPool] = useState<DataPoolSummary | null>(null);
   const [mine, setMine] = useState<MyAllocation | null>(null);
   const [members, setMembers] = useState<MemberAccessRow[]>([]);
@@ -152,7 +154,7 @@ export function DataPoolScreen({ space }: { space: SpaceSummary | null }) {
           <div>
             <strong>This is the Demo Provider.</strong> No real internet data is being shared and no
             real usage is being measured. Sharing data for real requires an integration with a
-            licensed telecom, ISP or MVNO — NetLink does not work around carrier billing.
+            licensed telecom, ISP or MVNO — {brand} does not work around carrier billing.
           </div>
         </Alert>
       )}
@@ -229,7 +231,7 @@ export function DataPoolScreen({ space }: { space: SpaceSummary | null }) {
           <div className="data__split">
             <Card title="Share this allowance">
               <p className="data__lede">
-                Everyone you invite uses their own NetLink account. You never share your password,
+                Everyone you invite uses their own {brand} account. You never share your password,
                 and you can take an allocation back at any time.
               </p>
               <div className="data__buttons">
@@ -257,7 +259,10 @@ export function DataPoolScreen({ space }: { space: SpaceSummary | null }) {
             </Card>
           </div>
 
-          <Card title="NetLink Passes" subtitle="An invitation that is waiting, accepted or spent.">
+          <Card
+            title={`${brand} Passes`}
+            subtitle="An invitation that is waiting, accepted or spent."
+          >
             {passes.length === 0 ? (
               <EmptyState
                 title="No passes yet"
@@ -447,6 +452,7 @@ function MyAllocationView({
   allocation: MyAllocation;
   usage: DataUsageSeries | null;
 }) {
+  const brand = useBrandName();
   const used = percentUsed(allocation.allocatedBytes, allocation.usedBytes);
   const dailyUsed = allocation.dailyLimitBytes
     ? percentUsed(allocation.dailyLimitBytes, allocation.usedTodayBytes)
@@ -522,7 +528,7 @@ function MyAllocationView({
       <Card title="What you can see here">
         <p className="data__lede">
           This Pass shares data only. It gives you no access to the owner&rsquo;s computers, files,
-          printers or settings, and you cannot see other people in this Space. NetLink records how
+          printers or settings, and you cannot see other people in this Space. {brand} records how
           much data you use and for how long — never what you visited or sent.
         </p>
       </Card>
@@ -543,6 +549,7 @@ function ConnectPoolCard({
   onConnected: () => void;
   error: string | null;
 }) {
+  const brand = useBrandName();
   const [accountRef, setAccountRef] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -551,7 +558,7 @@ function ConnectPoolCard({
     <div className="nl-stack" style={{ gap: 20 }}>
       <Alert tone="info">
         <div>
-          NetLink shares an allowance you already pay a provider for. It does not create data and
+          {brand} shares an allowance you already pay a provider for. It does not create data and
           does not work around carrier billing. Until a licensed telecom, ISP or MVNO integration is
           in place, the <strong>Demo Provider</strong> lets you try the whole flow with{' '}
           {formatBytes(100 * GIGABYTE)} of pretend allowance.

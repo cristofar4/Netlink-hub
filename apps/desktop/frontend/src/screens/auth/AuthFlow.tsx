@@ -9,6 +9,7 @@ import {
 import { api, ApiError } from '../../lib/api';
 import { getDeviceIdentity } from '../../lib/bridge';
 import { useSession } from '../../state/session';
+import { useBrandName } from '../../state/brand';
 import { NetLinkMark } from '../../components/NetLinkMark';
 import './auth.css';
 
@@ -22,6 +23,7 @@ type Step =
 export function AuthFlow() {
   const [step, setStep] = useState<Step>({ name: 'welcome' });
   const reducedMotion = usePrefersReducedMotion();
+  const brand = useBrandName();
 
   return (
     <div className="auth">
@@ -30,13 +32,13 @@ export function AuthFlow() {
         <div className="auth__aside-copy">
           <h2 className="auth__aside-title">Your computers. Wherever you are.</h2>
           <p className="auth__aside-text">
-            NetLink connects you to your own home or office computer — the files you choose, the
+            {brand} connects you to your own home or office computer — the files you choose, the
             printer in the next room, the data you decide to share. Nothing more.
           </p>
           <ul className="auth__promises">
             <li>Only folders you approve are ever visible</li>
             <li>Every device gets its own identity you can revoke</li>
-            <li>People you invite bring their own NetLink account</li>
+            <li>People you invite bring their own {brand} account</li>
           </ul>
         </div>
       </div>
@@ -50,7 +52,7 @@ export function AuthFlow() {
            */}
           <div className="auth__brand">
             <span className="auth__brand-mark" aria-hidden="true" />
-            <span className="auth__brand-name">NetLink</span>
+            <span className="auth__brand-name">{brand}</span>
           </div>
 
           {step.name === 'welcome' && (
@@ -104,20 +106,22 @@ export function AuthFlow() {
 // ---------------------------------------------------------------------------
 
 function Welcome({ onRegister, onSignIn }: { onRegister: () => void; onSignIn: () => void }) {
+  const brand = useBrandName();
+
   return (
     <>
       <header className="auth__header">
-        <p className="auth__eyebrow">Welcome to NetLink</p>
+        <p className="auth__eyebrow">Welcome to {brand}</p>
         <h1 className="auth__title">Reach your own computers, securely</h1>
         <p className="auth__lead">
-          Create a NetLink account to link this device to your Spaces. You will never be asked to
+          Create your {brand} account to link this device to your Spaces. You will never be asked to
           share your password with anyone.
         </p>
       </header>
 
       <div className="nl-stack" style={{ gap: 12, marginTop: 32 }}>
         <Button variant="primary" size="lg" block onClick={onRegister}>
-          Create a NetLink account
+          Create your {brand} account
         </Button>
         <Button variant="secondary" size="lg" block onClick={onSignIn}>
           I already have an account
@@ -329,6 +333,7 @@ function SignInStep({
   onEmailChallenge: (challenge: ChallengeResponse) => void;
 }) {
   const { setSession } = useSession();
+  const brand = useBrandName();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -375,7 +380,7 @@ function SignInStep({
         <button className="auth__back" onClick={onBack} type="button">
           ← Back
         </button>
-        <h1 className="auth__title">Sign in to NetLink</h1>
+        <h1 className="auth__title">Sign in to {brand}</h1>
         <p className="auth__lead">
           If this device is new, we will send a code to your email before letting it in.
         </p>
@@ -415,7 +420,7 @@ function SignInStep({
       </form>
 
       <p className="auth__footnote">
-        New to NetLink?{' '}
+        New to {brand}?{' '}
         <button className="auth__link" type="button" onClick={onRegister}>
           Create an account
         </button>
@@ -774,6 +779,7 @@ function useCountdown(isoTime: string): number {
 }
 
 function ControlPlaneStatus() {
+  const brand = useBrandName();
   const [state, setState] = useState<'checking' | 'up' | 'down'>('checking');
 
   useEffect(() => {
@@ -789,10 +795,10 @@ function ControlPlaneStatus() {
 
   return (
     <div className="auth__status">
-      {state === 'checking' && <StatusDot tone="connecting" label="Checking NetLink service…" />}
-      {state === 'up' && <StatusDot tone="secure" label="NetLink service reachable" />}
+      {state === 'checking' && <StatusDot tone="connecting" label={`Checking ${brand} service…`} />}
+      {state === 'up' && <StatusDot tone="secure" label={`${brand} service reachable`} />}
       {state === 'down' && (
-        <StatusDot tone="warning" label="NetLink service is not reachable right now" />
+        <StatusDot tone="warning" label={`${brand} service is not reachable right now`} />
       )}
     </div>
   );

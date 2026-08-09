@@ -13,6 +13,7 @@ import { colors, fontSize, radius, space } from '../theme/tokens';
 import { ApiError } from '../lib/api';
 import { api, useSession } from '../state/session';
 import { useSpace } from '../state/space';
+import { useBrandName } from '../state/brand';
 import { SHOW_DATA_POOL } from '../lib/config';
 
 /**
@@ -32,6 +33,7 @@ export function HomeScreen({
 }: {
   onOpenTab: (tab: 'data' | 'remote' | 'settings') => void;
 }) {
+  const brand = useBrandName();
   const { session } = useSession();
   const { spaces, active, select, loading, error: spaceError, reload } = useSpace();
   const [overview, setOverview] = useState<SpaceOverview | null>(null);
@@ -105,7 +107,7 @@ export function HomeScreen({
           <Card>
             <EmptyState
               title="No Spaces yet"
-              description="A Space is created on your computer, from the NetLink window there. It will appear here as soon as it exists."
+              description={`A Space is created on your computer, from the ${brand} window there. It will appear here as soon as it exists.`}
             />
           </Card>
         ) : (

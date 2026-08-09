@@ -12,6 +12,7 @@ import type { ChallengeResponse } from '@netlink/contracts';
 import { Alert, Button, Card, Screen } from '../components/primitives';
 import { colors, fontSize, radius, space, touchTarget } from '../theme/tokens';
 import { ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 import { api } from '../state/session';
 
 /**
@@ -31,6 +32,7 @@ type Stage =
   | { name: 'verify-device'; challenge: ChallengeResponse };
 
 export function AuthFlow() {
+  const brand = useBrandName();
   const [stage, setStage] = useState<Stage>({ name: 'welcome' });
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -60,7 +62,7 @@ export function AuthFlow() {
       <Screen>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
-            <Text style={styles.wordmark}>NetLink</Text>
+            <Text style={styles.wordmark}>{brand}</Text>
             <Text style={styles.tagline}>
               Reach your own computers, the files you choose, and the printer at home.
             </Text>
@@ -71,7 +73,7 @@ export function AuthFlow() {
           {stage.name === 'welcome' && (
             <Card>
               <Text style={styles.body}>
-                You will need your own NetLink account. If somebody invited you, sign in with your
+                You will need your own {brand} account. If somebody invited you, sign in with your
                 own account — nobody ever shares a password.
               </Text>
               <Button label="Create an account" onPress={() => setStage({ name: 'register' })} />

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSession } from '../state/session';
+import { useBrandName } from '../state/brand';
 import { ALL_SECTIONS, NAV_SECTIONS, type SectionId } from './sections';
 import { OverviewScreen } from './OverviewScreen';
 import { DataPoolScreen } from './DataPoolScreen';
@@ -34,6 +35,7 @@ export function Shell() {
 function ShellContent() {
   const [section, setSection] = useState<SectionId>('spaces');
   const { user } = useSession();
+  const brand = useBrandName();
   const { spaces, activeSpace, setActiveSpaceId } = useSpaces();
 
   // Detail sections (trusted devices, power, members) are opened from the
@@ -46,7 +48,7 @@ function ShellContent() {
       <nav className="shell__sidebar" aria-label="Main">
         <div className="shell__brand">
           <span className="shell__brand-mark" aria-hidden="true" />
-          <span className="shell__brand-name">NetLink</span>
+          <span className="shell__brand-name">{brand}</span>
         </div>
 
         <ul className="shell__nav">
@@ -93,7 +95,7 @@ function ShellContent() {
 
       <main className="shell__main">
         <TopBar
-          title={onOverview ? greeting(user?.name) : (current?.label ?? 'NetLink')}
+          title={onOverview ? greeting(user?.name) : (current?.label ?? brand)}
           subtitle={onOverview ? undefined : current?.description}
           spaces={spaces}
           activeSpace={activeSpace}

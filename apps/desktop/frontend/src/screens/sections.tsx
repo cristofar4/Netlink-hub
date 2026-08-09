@@ -65,7 +65,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'data',
     label: 'Data Pool',
-    description: 'Shared internet data, allocations and NetLink Passes',
+    description: 'Shared internet data, allocations and Passes',
     phase: 1,
     icon: icon(
       <>
@@ -166,7 +166,7 @@ export const DETAIL_SECTIONS: NavSection[] = [
   {
     id: 'devices',
     label: 'Trusted devices',
-    description: 'Every device enrolled on your NetLink account',
+    description: 'Every device enrolled on your account',
     phase: 1,
     icon: null,
   },

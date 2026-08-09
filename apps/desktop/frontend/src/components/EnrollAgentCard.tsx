@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Card } from '@netlink/ui';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 
 /**
  * Connects the background agent on this machine to a Space.
@@ -21,6 +22,7 @@ export function EnrollAgentCard({
   spaceId: string;
   onEnrolled: () => void;
 }) {
+  const brand = useBrandName();
   const [token, setToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,7 +51,7 @@ export function EnrollAgentCard({
   return (
     <Card
       title="Connect this computer"
-      subtitle="Join the NetLink agent on this machine to the Space so it can report as online."
+      subtitle={`Join the ${brand} agent on this machine to the Space so it can report as online.`}
     >
       {error && (
         <div style={{ marginBottom: 14 }}>
@@ -60,7 +62,7 @@ export function EnrollAgentCard({
       {!token ? (
         <>
           <p className="nl-muted" style={{ fontSize: 'var(--nl-text-sm)', lineHeight: 1.6 }}>
-            NetLink creates a link that is valid for five minutes and can be used once. Your
+            {brand} creates a link that is valid for five minutes and can be used once. Your
             password is never given to the background service.
           </p>
           <div style={{ marginTop: 16 }}>

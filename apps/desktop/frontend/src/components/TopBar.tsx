@@ -3,6 +3,7 @@ import { Badge, StatusDot } from '@netlink/ui';
 import { AUDIT_ACTION_LABELS, type AuditRecord, type SpaceSummary } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
 import { useSession } from '../state/session';
+import { useBrandName } from '../state/brand';
 import { NAV_SECTIONS, type SectionId } from '../screens/sections';
 import './topbar.css';
 
@@ -135,6 +136,7 @@ function GlobalSearch({
   space: SpaceSummary | null;
   onNavigate: (section: SectionId) => void;
 }) {
+  const brand = useBrandName();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState<SearchHit[] | null>(null);
@@ -204,7 +206,7 @@ function GlobalSearch({
           type="search"
           className="topbar__search-input"
           placeholder="Search"
-          aria-label="Search NetLink"
+          aria-label={`Search ${brand}`}
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);

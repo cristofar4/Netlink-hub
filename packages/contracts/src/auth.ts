@@ -226,3 +226,25 @@ export function maskEmail(email: string): string {
 
   return `${maskedLocal}@${domain}`;
 }
+
+// ---------------------------------------------------------------------------
+// Branding
+// ---------------------------------------------------------------------------
+
+/**
+ * Who this installation says it is.
+ *
+ * Served by the control plane so the name on the screen and the name signing
+ * the verification emails come from one place. An operator running NetLink for
+ * their own company sets it once, on the server, rather than rebuilding every
+ * client with a different constant compiled into it.
+ */
+export type BrandingResponse = {
+  name: string;
+  /** Absent when the operator has not set one. */
+  url?: string;
+  supportEmail?: string;
+};
+
+/** What the clients show before the server answers, and if it never does. */
+export const DEFAULT_BRAND_NAME = 'NetLink';

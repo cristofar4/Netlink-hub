@@ -13,6 +13,7 @@ import {
 import { api, ApiError } from '../lib/api';
 import { useLiveEvents } from '../state/live';
 import { useSpaces } from '../state/space';
+import { useBrandName } from '../state/brand';
 import { EnrollAgentCard } from '../components/EnrollAgentCard';
 import { SpaceMap, type MapNode } from '../components/SpaceMap';
 import type { SectionId } from './sections';
@@ -32,6 +33,7 @@ import './overview.css';
  */
 export function OverviewScreen({ onNavigate }: { onNavigate: (section: SectionId) => void }) {
   const { activeSpace, loading: spacesLoading, error: spacesError } = useSpaces();
+  const brand = useBrandName();
   const spaceId = activeSpace?.id ?? null;
 
   const [overview, setOverview] = useState<SpaceOverview | null>(null);
@@ -304,14 +306,14 @@ export function OverviewScreen({ onNavigate }: { onNavigate: (section: SectionId
                 onClick={() => onNavigate('printers')}
               />
               <QuickAction
-                label="Create a NetLink Pass"
+                label="Create a Pass"
                 icon={<KeyIcon />}
                 onClick={() => onNavigate('data')}
               />
             </div>
           </Card>
 
-          <Card title="NetLink Assist">
+          <Card title={`${brand} Assist`}>
             <Assist overview={overview} onNavigate={onNavigate} />
           </Card>
 

@@ -21,6 +21,7 @@ import { colors, fontSize, radius, space } from '../theme/tokens';
 import { ApiError } from '../lib/api';
 import { api } from '../state/session';
 import { useSpace } from '../state/space';
+import { useBrandName } from '../state/brand';
 
 /**
  * Remote access from a phone.
@@ -32,6 +33,7 @@ import { useSpace } from '../state/space';
  * computer on, look through an approved folder, see whether a printer is ready.
  */
 export function RemoteAccessScreen({ onOpenPower }: { onOpenPower: () => void }) {
+  const brand = useBrandName();
   const { active } = useSpace();
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [folders, setFolders] = useState<ApprovedFolder[]>([]);
@@ -105,7 +107,7 @@ export function RemoteAccessScreen({ onOpenPower }: { onOpenPower: () => void })
           <Card>
             <EmptyState
               title="Nothing shared yet"
-              description="Install the NetLink agent on a computer and approve a folder or printer from the NetLink window there."
+              description={`Install the ${brand} agent on a computer and approve a folder or printer from the ${brand} window there.`}
             />
           </Card>
         )}
@@ -153,7 +155,7 @@ export function RemoteAccessScreen({ onOpenPower }: { onOpenPower: () => void })
             }
           >
             <Text style={styles.body}>
-              Sending a document to this printer needs the file, so it is done from the NetLink
+              Sending a document to this printer needs the file, so it is done from the {brand}
               window on your computer.
             </Text>
           </Card>
@@ -162,7 +164,7 @@ export function RemoteAccessScreen({ onOpenPower }: { onOpenPower: () => void })
         {agents.length > 0 && (
           <Card title="Watching a screen">
             <Text style={styles.body}>
-              Remote desktop is in the NetLink window on your computer. It needs a keyboard and a
+              Remote desktop is in the {brand} window on your computer. It needs a keyboard and a
               screen with room for one, so it is not built into the phone app.
             </Text>
           </Card>

@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration';
 import type { Branding } from './branding';
 import { MAIL_BRANDING, MAIL_TRANSPORT, MailService, createMailTransport } from './mail.service';
+import { BrandingController } from './branding.controller';
 
 @Global()
 @Module({
+  controllers: [BrandingController],
   providers: [
     {
       provide: MAIL_TRANSPORT,

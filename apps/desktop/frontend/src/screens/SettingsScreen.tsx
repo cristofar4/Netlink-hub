@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Card, ComingLater, StatusDot, SubNav, Toggle } fr
 import type { DataPoolSummary, SpaceSummary } from '@netlink/contracts';
 import { useSession } from '../state/session';
 import { useSpaces } from '../state/space';
+import { useBrandName } from '../state/brand';
 import { api } from '../lib/api';
 import { forgetDeviceIdentity } from '../lib/bridge';
 import { DevicesScreen } from './DevicesScreen';
@@ -127,6 +128,7 @@ function ProfilePanel() {
 // ---------------------------------------------------------------------------
 
 function AccountPanel() {
+  const brand = useBrandName();
   const { environment, signOut } = useSession();
   const [forgetting, setForgetting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -163,7 +165,7 @@ function AccountPanel() {
         subtitle="Use this after revoking this device from another computer."
       >
         <p className="settings__lede">
-          Removes this installation&rsquo;s key pair and identity from this machine. NetLink will
+          Removes this installation&rsquo;s key pair and identity from this machine. {brand} will
           enroll as a brand-new device the next time you sign in. Your account, your other devices
           and everything in your Spaces are untouched.
         </p>
@@ -195,6 +197,7 @@ function AccountPanel() {
 // ---------------------------------------------------------------------------
 
 function SecurityPanel() {
+  const brand = useBrandName();
   const { device, environment } = useSession();
   const dpapi = environment?.keyProtection === 'windows-dpapi';
 
@@ -241,7 +244,7 @@ function SecurityPanel() {
 
       <Card
         title="How this device is protected"
-        subtitle="What NetLink is actually doing on this machine, not what it aims to do."
+        subtitle={`What ${brand} is actually doing on this machine, not what it aims to do.`}
       >
         <dl className="settings__facts">
           <Fact
@@ -287,6 +290,7 @@ function SecurityPanel() {
  * looking for.
  */
 function InternetPanel({ onNavigate }: { onNavigate: (section: SectionId) => void }) {
+  const brand = useBrandName();
   const { spaces } = useSpaces();
   const [pools, setPools] = useState<Map<string, DataPoolSummary | null>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -351,7 +355,7 @@ function InternetPanel({ onNavigate }: { onNavigate: (section: SectionId) => voi
       )}
 
       <p className="settings__lede settings__lede--spaced">
-        NetLink shares an allowance you already pay a provider for. It does not create data and does
+        {brand} shares an allowance you already pay a provider for. It does not create data and does
         not work around carrier billing.
       </p>
     </Card>
@@ -415,9 +419,10 @@ function NotificationsPanel() {
 // ---------------------------------------------------------------------------
 
 function PrivacyPanel() {
+  const brand = useBrandName();
   return (
     <div className="settings__stack">
-      <Card title="What NetLink records">
+      <Card title={`What ${brand} records`}>
         <ul className="settings__list">
           <li>
             That a session happened: who connected, to which computer, in which mode, for how long.
@@ -427,7 +432,7 @@ function PrivacyPanel() {
         </ul>
       </Card>
 
-      <Card title="What NetLink never records">
+      <Card title={`What ${brand} never records`}>
         <ul className="settings__list settings__list--never">
           <li>What was on a screen during a remote session.</li>
           <li>Keystrokes, pointer movement or clipboard contents.</li>

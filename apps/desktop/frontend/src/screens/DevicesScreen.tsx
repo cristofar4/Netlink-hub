@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Badge, Button, Card, EmptyState, Input, StatusDot } from '@netlink/ui';
 import type { AuthenticatedDevice } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 import { useSession } from '../state/session';
 
 /**
@@ -12,6 +13,7 @@ import { useSession } from '../state/session';
  * plainly what will happen — including that other devices are unaffected.
  */
 export function DevicesScreen() {
+  const brand = useBrandName();
   const { device: currentDevice } = useSession();
   const [devices, setDevices] = useState<AuthenticatedDevice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function DevicesScreen() {
       {notice && !error && <Alert tone="success">{notice}</Alert>}
 
       <Alert tone="info">
-        Every NetLink installation generates its own key pair. The private half never leaves that
+        Every {brand} installation generates its own key pair. The private half never leaves that
         machine — only the public half is registered here. Revoking one device does not affect any
         other.
       </Alert>

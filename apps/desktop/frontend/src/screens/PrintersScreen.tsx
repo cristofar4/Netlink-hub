@@ -9,6 +9,7 @@ import {
   type SpaceSummary,
 } from '@netlink/contracts';
 import { api, ApiError } from '../lib/api';
+import { useBrandName } from '../state/brand';
 import './files.css';
 
 /**
@@ -19,6 +20,7 @@ import './files.css';
  * checked by their magic bytes rather than their name.
  */
 export function PrintersScreen({ space }: { space: SpaceSummary | null }) {
+  const brand = useBrandName();
   const [printers, setPrinters] = useState<SharedPrinter[] | null>(null);
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export function PrintersScreen({ space }: { space: SpaceSummary | null }) {
       {jobs.length > 0 && (
         <Card
           title="Recent print jobs"
-          subtitle="NetLink records what was printed and where — never what was in it."
+          subtitle={`${brand} records what was printed and where — never what was in it.`}
         >
           <ul className="nl-stack" style={{ gap: 12, listStyle: 'none', padding: 0, margin: 0 }}>
             {jobs.map((job) => (

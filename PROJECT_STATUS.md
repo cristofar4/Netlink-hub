@@ -19,11 +19,11 @@ Every number below was produced by running the checks, not estimated.
 | `go vet` (agent, desktop) | Clean |
 | TypeScript — contracts, ui, api, frontend, mobile | Clean |
 | Contract tests | **54 passed** |
-| API tests (unit + integration, real PostgreSQL) | **305 passed**, 13 suites |
+| API tests (unit + integration, real PostgreSQL) | **308 passed**, 14 suites |
 | Go tests (agent) | **208 passed**, 10 packages |
 | Frontend tests | **40 passed** |
 | Mobile tests | **11 passed** |
-| **Total automated tests** | **618 passed, 0 failing** |
+| **Total automated tests** | **621 passed, 0 failing** |
 | Android bundle | Metro bundles the phone app (645 modules) |
 | Production builds — contracts, API, frontend, agent | All succeed |
 | Windows cross-compile — agent, desktop | Both succeed (DPAPI path compiles) |
@@ -379,6 +379,14 @@ schema itself is built from: the form cannot promise a rule the server does not
 enforce, or miss one it does. The device-approval step now names the device
 being approved, so it can be compared against the email — which is the whole
 defence against being talked through this by a stranger on the phone.
+
+**The name, everywhere.** `GET /api/branding` serves what the operator
+configured, and both clients read it at boot — so the name on the sign-in
+screen is the same one signing the emails. That match is precisely what
+somebody checks before typing a code in, and it only holds if the two cannot
+disagree. The clients fall back to the product's own name when the request
+fails; a label is not a capability, and a sign-in screen showing nothing where
+its name should be is worse than one showing a default.
 
 **The emails.** They were signed "NetLink" in hardcoded strings. A verification
 code is the most phishable message this product sends, and the defence is that

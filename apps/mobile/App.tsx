@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from './src/theme/tokens';
 import { SessionProvider, useSession } from './src/state/session';
 import { SpaceProvider } from './src/state/space';
+import { BrandProvider } from './src/state/brand';
 import { AuthFlow } from './src/screens/AuthFlow';
 import { Shell } from './src/screens/Shell';
 
@@ -20,7 +21,9 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
       <SessionProvider>
-        <Root />
+        <BrandProvider>
+          <Root />
+        </BrandProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );
